@@ -119,4 +119,12 @@ into the docs** (credential model corrected, master plan de-Elm'd and moved to
 the real 4-repo layout, resolved-media persistence made memory-only, gapless
 reframed as a measured target). See the Resolution section of
 [`docs/audits/2026-07-17-core-player-plan.md`](./audits/2026-07-17-core-player-plan.md).
-No open blocking findings; re-audit when Phase 4 code lands.
+Those original findings are closed.
+
+**Architecture re-audit (2026-07-17): changes required — 2 high, 4 medium.**
+The revised macro-architecture is sound and the first audit's four findings
+remain resolved, but the stream protocol lacks the expiry signal required by
+the scheduler and generic Query retry/SWR semantics are unsafe for `/stream`.
+Queue identity, stale async completion, browser secret threat-model, and
+failure-loop rules also need clarification before implementation. See
+[`docs/audits/2026-07-17-core-player-architecture-reaudit.md`](./audits/2026-07-17-core-player-architecture-reaudit.md).
