@@ -1,5 +1,12 @@
 # Core Player Plan Audit — 2026-07-17
 
+- **Audit ID:** A-001
+- **Status:** RESOLVED — historical; current sign-off moved to A-002/A-003
+- **Superseded by:** A-002 for core architecture; A-003 for product-wide sign-off
+- **Audited commits:** `player@db1fb72`, `.github@36b692f`
+- **Last updated:** 2026-07-17
+- **Registry:** [`README.md`](./README.md)
+
 ## Scope
 
 Plan-level audit of the core player, covering
@@ -171,4 +178,3 @@ so these are plan/spec fixes):
   Plan Phase 5 exit criterion and Checklist §8 updated to match.
 
 Verdict addressed at the plan/spec level; re-audit when Phase 4 code lands.
-

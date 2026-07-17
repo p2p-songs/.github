@@ -27,3 +27,9 @@ This project is built with an implement/review split: one session
 implements against the plan, a separate session audits against the
 checklist without access to the implementer's conversation — so all three
 docs need to stand on their own.
+
+## Before implementation
+
+Read [`docs/audits/README.md`](./docs/audits/README.md) before starting feature
+work. Its first row is the latest audit and authoritative sign-off status;
+issues alone do not communicate supersession or the overall verdict.

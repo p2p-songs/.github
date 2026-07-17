@@ -41,9 +41,12 @@ whether the product will keep its promises in real use.
 2. [`docs/REVIEW_CHECKLIST.md`](./REVIEW_CHECKLIST.md) — the mechanical
    *what to check*, cross-referenced to plan sections. Treat this as your
    primary worklist for technical-soundness and legal-validity checks.
-3. Each repo's `CLAUDE.md` (`player/`, `addon-sdk/`, `addons/`, `backend/`,
+3. [`docs/audits/README.md`](./audits/README.md) — newest-first audit registry,
+   current sign-off, supersession, and open findings. Do not infer "latest"
+   from filename sorting when multiple audits share a date.
+4. Each repo's `CLAUDE.md` (`player/`, `addon-sdk/`, `addons/`, `backend/`,
    and any repo added later) — scope and repo-specific invariants.
-4. Actual repo state: code, commit history, open issues/PRs. This is what
+5. Actual repo state: code, commit history, open issues/PRs. This is what
    you're auditing — not the plan's aspirations, the plan's aspirations
    *compared to* what's actually there.
 
@@ -159,7 +162,9 @@ commits, pushes, or issues.
    `.github/docs/audits/YYYY-MM-DD-<short-scope>.md` (e.g.
    `2026-08-01-stream-debrid.md`), committed and pushed to the `.github`
    repo. Contents: scope of this pass, one-paragraph overall verdict, then
-   every finding using the template in §5. Update
+   every finding using the template in §5. Directly below the title include
+   `Audit ID`, `Status`, `Supersedes`, `Audited commits`, and `Last updated`.
+   Add/update the newest-first entry in `docs/audits/README.md`. Update
    `docs/REVIEW_CHECKLIST.md`'s "Current status" section to reflect what
    was actually audited and when.
 2. **GitHub Issues** — for every `critical` or `high` severity finding,
@@ -203,6 +208,9 @@ commits, pushes, or issues.
 
 ## 7. What the implementer does with findings
 
+- Before implementation or new feature work, read
+  `docs/audits/README.md` and the latest report's current decision. This is
+  required even if no GitHub issue notification was seen.
 - Check `gh issue list --label audit-finding --state open` across the org
   repos at the start of a work session, before starting new feature work,
   so audit findings don't silently age out.

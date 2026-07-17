@@ -1,5 +1,12 @@
 # Core Player Architecture Re-audit — 2026-07-17
 
+- **Audit ID:** A-002
+- **Status:** RESOLVED — historical; all six findings closed
+- **Superseded by:** A-003 for current product-wide sign-off
+- **Audited commits:** `player@4afaee3`, `.github@a6a69c9`
+- **Last updated:** 2026-07-17
+- **Registry:** [`README.md`](./README.md)
+
 ## Scope
 
 Second plan-level audit of the committed core-player architecture after commit
@@ -243,4 +250,3 @@ New invariants propagated to REVIEW_CHECKLIST §6/§7/§8. Issues player#2 and
 .github#2 closed with references. Re-audit when Phase 4 code lands (these are
 now testable behaviors, e.g. the §4b race matrix and the SW-cache-exclusion
 test).
-

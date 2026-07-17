@@ -15,3 +15,7 @@ https://github.com/p2p-songs/.github/blob/main/docs/ADVERSARIAL_REVIEW_CONTRACT.
 For general repo orientation (this repo has no code — it's the docs hub),
 see [`CLAUDE.md`](./CLAUDE.md) in this same directory; its content applies
 regardless of which agent/tool is reading it.
+
+If you are the **implementer**, before starting work read the newest-first
+[`docs/audits/README.md`](./docs/audits/README.md) registry and its latest
+report. It is the authoritative sign-off status even if you saw no GitHub issue.

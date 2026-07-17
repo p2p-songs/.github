@@ -1,5 +1,14 @@
 # Product-wide Plan Audit — 2026-07-17
 
+- **Audit ID:** A-003
+- **Status:** OPEN — 1 high; no implementation sign-off
+- **Supersedes:** A-001 and A-002 for current plan sign-off
+- **Audited commits:** `.github@0fd8abe`, `player@3fc591e`,
+  `addon-sdk@3629382`, `addons@37b02be`, `backend@16e378d`
+- **Last updated:** 2026-07-17
+- **Open issue:** [addon-sdk#1](https://github.com/p2p-songs/addon-sdk/issues/1)
+- **Registry:** [`README.md`](./README.md)
+
 ## Scope
 
 Adversarial review of the current committed project plan across `.github`,
@@ -114,4 +123,3 @@ Correct the track identity scheme and its protocol fixtures. Once that single
 finding is reconciled coherently across the plan, checklist, SDK contract, and
 player/addon consumers, this plan is ready for implementation under the
 declared scope.
-

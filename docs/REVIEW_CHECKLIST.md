@@ -174,6 +174,11 @@ Applies once Phase 5b lands; the `backend` repo is optional and self-hosted.
       (operator holds many users' keys) — Plan §3. — ARCHITECTURE §6b
 
 ## Current status (update as phases land)
+**Start here:** the newest-first
+[`docs/audits/README.md`](./audits/README.md) registry is authoritative for the
+latest audit, supersession, sign-off, and open findings. The prose below is the
+chronological history.
+
 As of 2026-07-17, the repos (`​.github`, `player`, `addon-sdk`, `addons`, and
 `backend` — the 5th, added for optional accounts/sync) contain
 planning/scaffolding only; no runtime implementation exists. The core-player
@@ -198,7 +203,8 @@ model + no-remote-theme-code invariant (§6a/§7a); failure skip-ahead bounded b
 a per-session sweep + backoff (§4b). New invariants added to §6/§7/§8 above.
 See the Resolution section of
 [`docs/audits/2026-07-17-core-player-architecture-reaudit.md`](./audits/2026-07-17-core-player-architecture-reaudit.md).
-Both re-audit issues (player#2, .github#2) closed. No open blocking findings.
+Both re-audit issues (player#2, .github#2) closed. **At the close of A-002**
+there were no blocking findings; A-003 below is newer and owns current sign-off.
 
 **Design change (2026-07-17): optional accounts & sync added.** The original
 "no server, local-only" assumption was reversed by product decision: users can
