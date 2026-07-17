@@ -7,6 +7,9 @@ audit has a precise, mechanically-checkable list to work from, instead of
 having to re-derive intent from [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md)
 prose each time. When the two disagree, `IMPLEMENTATION_PLAN.md` is the
 source of truth for *why*; this doc is the source of truth for *what to check*.
+For the full audit process (roles, ground rules, finding format, how
+findings get delivered back) see
+[`ADVERSARIAL_REVIEW_CONTRACT.md`](./ADVERSARIAL_REVIEW_CONTRACT.md).
 
 Each item names which repo(s) it applies to and which plan section it comes from.
 
