@@ -184,7 +184,7 @@ to change the architecture. What it does contribute:
 | Built-in YouTube player (`ytId` stream field) | **`stream-ytmusic`** — same `ytId`-style field, official embed | New addon, added per §4. |
 | Local BitTorrent streaming server | **Cut from the critical path** | See Phase 8 — optional, lowest priority. |
 | `<video>` / MPV player | `<audio>` element + queue/gapless controller | Needs `MediaSession` for lock-screen controls, which video mostly doesn't. |
-| stremio-core (Rust state machine) | **`music-core`** — TS first, optional Rust/WASM port later | Deliberate divergence — see §6. |
+| stremio-core (Rust state machine) | Web-native layered engine — **see [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)** | The player repo has its own architecture doc that **supersedes** the earlier "Elm-style `music-core`" idea. Web-only ⇒ no cross-platform reason for Rust/Elm; predictable state comes from a scoped playback state machine instead. |
 
 ---
 
@@ -242,10 +242,10 @@ addon's own internal implementation detail.
 | Discovery (finding candidate releases) | Jackett/Prowlarr-style indexer proxy, built directly into `stream-debrid`'s own discovery module | Same as Torrentio: built-in scraping logic, not a pluggable external source. |
 | Debrid integration | Real-Debrid first, then AllDebrid/Premiumize/TorBox behind a shared `debrid-clients` interface (`checkCache`, `resolve`) | Matches Torrentio's own "pick your provider in `/configure`, works across all of them" model. |
 | Addon configuration | `/configure` HTML page → config JSON/base64-encoded into the manifest URL path | Exactly Stremio's `configurable` `behaviorHints` pattern and how Torrentio's own configure page works. |
-| Core state pattern | Elm-style `Msg → Effects → Model` | Modeled on stremio-core's runtime, reimplemented in TS to learn the pattern without Rust/WASM cost up front. |
-| Player app | React + Vite | Fast dev loop, matches stremio-web conceptually. |
-| Playback | HTML5 `<audio>` for direct URLs, YouTube IFrame embed for `stream-ytmusic`, `MediaSession API` for lock-screen/media-key control | Every non-YouTube stream is already a plain Range-servable HTTPS URL by the time the player sees it. |
-| Storage | IndexedDB (`idb`) for library/addon collection | Debrid API key lives only inside the `stream-debrid` addon's own config, never in the player. |
+| Player architecture | **Superseded by [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)** — web-native layered engine (scoped playback state machine + TanStack Query + Dexie + Zustand), single Vite app with a lint-enforced pure-`core`/`ui` boundary | Web-only removes the cross-platform constraint that justified Stremio's Elm-in-Rust core. See that doc for the full reasoning; the rows below are the high-level summary. |
+| Player app | React + Vite + TypeScript | Fast dev loop; keeps native-shell reuse open without committing to it now. |
+| Playback | Dual `<audio>` + volume-automation crossfade (CORS-independent) for direct URLs; YouTube IFrame for `stream-ytmusic`; `MediaSession API` + PWA for background/OS integration | Core crossfade avoids Web Audio on purpose — cross-origin debrid links taint the Web Audio graph. See ARCHITECTURE §4c. |
+| Storage | Dexie (IndexedDB) for library/playlists/addons/settings/history; TanStack Query for addon HTTP cache | Music library grows large and needs indexed local search. Debrid keys never live in the player. See ARCHITECTURE §6. |
 | Streaming server | **Cut from MVP** — Phase 8 stretch only | Debrid links are already direct HTTPS. |
 | Operating model | `stream-debrid` never stores audio itself and always resolves debrid using the requesting user's own credentials from `/configure` — never a shared/pooled account; protocol/SDK/core/player stay neutral and never bundle it by default | See §3 — this is the legal-compliance decision, not just an infra one. Public hosting (à la Torrentio) is fine as long as those invariants hold. |
 | Addon hosting | Stateless addons (`musicmeta`, `catalog-charts`, `stream-legal`, `stream-ytmusic`, `lyrics-lrclib`) → Cloudflare Workers/Vercel functions. `stream-debrid` → small always-on Node service (outbound calls to indexers + debrid APIs need a persistent process, not a functions runtime). | Same shape as how Torrentio itself is deployed. |

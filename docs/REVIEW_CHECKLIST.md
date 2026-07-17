@@ -75,12 +75,26 @@ Each item names which repo(s) it applies to and which plan section it comes from
       committed to any repo, used as a default/fallback, or logged. Config
       lives only in the per-request `/configure`-encoded value.
 
-## 8. Core state machine (`player`)
-- [ ] `music-core` stays plain TypeScript, Elm-style (`Msg -> Effects ->
-      Model`, unidirectional). A Rust/WASM port is an explicit stretch
-      phase (Plan §10, Phase 6) — flag it if attempted before Phases 1-5
-      are otherwise done, since that ordering was a deliberate choice, not
-      an oversight.
+## 8. Core engine (`player`)
+The player architecture is specified in detail in
+[`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md),
+which **deliberately supersedes** the master plan's "Elm-style core" idea.
+Audit the player against that doc, not against a stremio-core port.
+- [ ] The core engine (`src/core`) imports nothing from `src/ui` — the
+      headless/UI-agnostic boundary is real and lint-enforced. Engine logic
+      (queue, playback machine, scheduler) must be unit-testable without a
+      browser or a live addon. — ARCHITECTURE §8
+- [ ] **Do NOT flag the absence of an Elm `Msg→Effects→Model` runtime as
+      drift.** It was intentionally retired (ARCHITECTURE §1, §11);
+      predictable state is provided by the scoped playback state machine
+      instead. A Rust/WASM port remains out of scope for web-only v1.
+- [ ] Stream resolution is just-in-time (next 1-2 items only), never
+      whole-queue-upfront. Resolving the entire queue eagerly (expiring
+      debrid links, hammering debrid APIs) is an anti-pattern — flag it.
+      — ARCHITECTURE §5, §11
+- [ ] No debrid keys / indexer config anywhere in the player; it only ever
+      handles already-resolved URLs or a `ytId`. (Same as §1/§7.)
+      — ARCHITECTURE §11
 
 ## Current status (update as phases land)
 As of the last update, all four repos (`​.github`, `player`, `addon-sdk`,
