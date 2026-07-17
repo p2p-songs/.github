@@ -207,5 +207,15 @@ self-hosted** backend (self-hosted Supabase). The credential-sync model is
 **server-readable, not zero-knowledge** (Stremio's model), made responsible by
 self-hosting + encryption-at-rest + TLS + RLS. New `backend` repo; new
 checklist §9; the "never synced" invariant is intentionally reversed (see §7).
-See ARCHITECTURE §6b and Plan §3/§7/§9/§10 (Phase 5b). Not yet audited — flag
-for the next audit pass. Re-audit when Phase 4 (and later Phase 5b) code lands.
+See ARCHITECTURE §6b and Plan §3/§7/§9/§10 (Phase 5b). This design is included
+in the product-wide plan audit below; re-audit again when Phase 5b code lands.
+
+**Product-wide plan audit (2026-07-17): does not pass — 2 high, 5 medium,
+1 low.** The technical macro-architecture and documented legal invariants are
+sound, but first-run playback has no in-product route to discover/install a
+manifest and the album-track ID scheme collides across MusicBrainz media.
+UI/accessibility acceptance criteria and four optional-sync boundaries
+(conflict ordering, server provisioning/discovery, encryption key lifecycle,
+active-device ownership) also require decisions at their stated phase gates.
+See
+[`docs/audits/2026-07-17-product-wide-plan.md`](./audits/2026-07-17-product-wide-plan.md).
