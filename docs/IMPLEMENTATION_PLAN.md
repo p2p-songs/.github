@@ -281,11 +281,31 @@ addon's own internal implementation detail.
 ```jsonc
 // stream-legal / stream-debrid: fully resolved, direct
 { "url": "https://…/track.flac", "name": "FLAC · cached",
-  "behaviorHints": { "bingeGroup": "album:<release-mbid>", "filename": "…" } }
+  "behaviorHints": {
+    "bingeGroup": "album:<release-mbid>", "filename": "…",
+    "expiresAt": "2026-07-17T21:30:00Z"   // optional; see "Link expiry" below
+  } }
 
 // stream-ytmusic: official embed, mirrors Stremio's native ytId field
 { "ytId": "dQw4w9WgXcQ", "name": "YouTube Music" }
 ```
+
+**Link expiry (optional signal).** Resolved debrid/CDN `url`s are often bearer
+links that expire, but the player has no neutral way to know when (parsing
+debrid URL formats would break addon-neutrality). So the protocol defines an
+**optional** expiry hint in `behaviorHints`, which an addon that knows its
+links' lifetime SHOULD set:
+
+- `expiresAt` — absolute UTC ISO-8601 timestamp when the `url` stops working; **or**
+- `maxAgeSeconds` — integer seconds of validity from the moment of the response.
+
+Rules: the field is **optional** and is a **hint only** — the player uses it to
+avoid preloading a soon-dead link, but its *correctness* guarantee is
+re-resolve-on-failure, never trust in this field (see
+[`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)
+§5/§5a). The `addon-sdk` validates the field's shape when present; when absent,
+the player assumes only a short local freshness horizon and re-resolves on any
+load/auth failure.
 
 The protocol still technically supports a torrent pointer
 (`infoHash`/`fileIdx`) for parity with Stremio and for the optional Phase 8

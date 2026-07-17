@@ -69,6 +69,10 @@ Each item names which repo(s) it applies to and which plan section it comes from
 - [ ] Stream objects from `stream-legal`/`stream-debrid` are always fully
       resolved (`url` present); a bare `infoHash`/`fileIdx` pointer with no
       `url` should not come from any reference addon. — Plan §8
+- [ ] The optional link-expiry hint (`behaviorHints.expiresAt` UTC ISO-8601 /
+      `maxAgeSeconds` int) is validated by the SDK when present, and is treated
+      everywhere as an **optional hint** — never a required field, never the
+      basis of a correctness guarantee. — Plan §8; ARCHITECTURE §5a
 
 ## 7. Secrets hygiene (all repos)
 - [ ] No debrid API keys, indexer credentials, or other secrets are ever
@@ -77,11 +81,22 @@ Each item names which repo(s) it applies to and which plan section it comes from
 - [ ] **Player-side reality (corrected):** a *configured* stream addon's
       manifest URL contains the user's debrid key, and the player necessarily
       holds it to call the addon — so the player must treat configured addon
-      URLs as **secrets**: stored as credential material, never
+      URLs as **secrets**: stored in a secret-bearing store, never
       logged/exported/telemetered, config segment redacted in any UI display,
       and excluded from service-worker/HTTP caching. Do **not** accept (or
       write) a claim that "the player never holds the key" — that was audited
       as false. — Plan §7; ARCHITECTURE §6a
+- [ ] The secret store is **not** called a "keychain" and is not presented as a
+      security boundary (same-origin script can read it). A v1 browser threat
+      model is required: strict CSP (no `unsafe-inline`/`eval`), Trusted Types
+      where available, redacted error boundaries, minimal in-origin deps, and a
+      test asserting configured URLs never land in any SW/HTTP cache. Client-
+      side encryption without a user-held key is **not** accepted as a fix. —
+      ARCHITECTURE §6a
+- [ ] **No remote UI code (`player`):** themes/plugins are first-party bundled,
+      build-time code only — never fetched/`eval`'d at runtime. Remote theme
+      code would run in the origin holding the debrid credential. External/
+      distributable themes are a v1 non-goal. — ARCHITECTURE §6a, §7a
 
 ## 8. Core engine (`player`)
 The player architecture is specified in detail in
@@ -109,6 +124,27 @@ Audit the player against that doc, not against a stremio-core port.
 - [ ] "Gapless" is validated as a measured target (silence threshold on a
       browser×codec matrix, same-origin test fixtures), not asserted as an
       absolute; crossfade is the documented fallback. — ARCHITECTURE §4c
+- [ ] **`/stream` is a command, not a cached query:** it does NOT run under the
+      generic TanStack Query policy (auto-retry, `refetchOnWindowFocus`,
+      `refetchOnReconnect`, SWR). It uses a scheduler-owned command plane with
+      in-flight dedup, `retry: false`, memory-only results. Metadata calls
+      (manifest/catalog/meta/lyrics) and `/stream` must be separate planes. —
+      ARCHITECTURE §5a, §6
+- [ ] **Stream freshness is re-resolve-on-failure**, not dependence on a
+      protocol expiry field (which is only an optional hint). — ARCHITECTURE §5/§5a
+- [ ] **Async results commit by identity, not just abort:** every resolve/load
+      carries `{sessionEpoch, queueItemId, attemptId}` and the reducer drops
+      completions whose stamp doesn't match current state. AbortController alone
+      is insufficient. Race tests required (resolve-after-skip,
+      failure-after-success, reorder-during-resolve, double-completion). —
+      ARCHITECTURE §4b
+- [ ] **Queue identity is by stable ID:** `currentItemId` + `playOrder` (not a
+      mutable array index); "up next" reads from `playOrder` so it's correct
+      under shuffle. Index-as-identity is a defect. — ARCHITECTURE §4a
+- [ ] **Failure is bounded:** skip-ahead runs inside a per-session failure
+      sweep with a terminal error state and provider backoff; `repeat: "all"` /
+      autoplay must not create an unbounded resolve/fail/skip loop. —
+      ARCHITECTURE §4b
 
 ## Current status (update as phases land)
 As of 2026-07-17, all four repos (`​.github`, `player`, `addon-sdk`,
@@ -122,9 +158,17 @@ reframed as a measured target). See the Resolution section of
 Those original findings are closed.
 
 **Architecture re-audit (2026-07-17): changes required — 2 high, 4 medium.**
-The revised macro-architecture is sound and the first audit's four findings
-remain resolved, but the stream protocol lacks the expiry signal required by
-the scheduler and generic Query retry/SWR semantics are unsafe for `/stream`.
-Queue identity, stale async completion, browser secret threat-model, and
-failure-loop rules also need clarification before implementation. See
+The revised macro-architecture was judged sound; the six findings concerned
+implementation-shaping seams. **All six are now reconciled into the docs**
+(2026-07-17): optional protocol expiry hint added (Plan §8) with
+re-resolve-on-failure as the real guarantee; `/stream` split into a
+scheduler-owned command plane distinct from the metadata query plane
+(ARCHITECTURE §5a/§6); queue re-modeled on stable IDs + `playOrder`
+(§4a); async completions commit by `{sessionEpoch, queueItemId, attemptId}`
+stamp (§4b); credential store renamed secret-bearing with a v1 browser threat
+model + no-remote-theme-code invariant (§6a/§7a); failure skip-ahead bounded by
+a per-session sweep + backoff (§4b). New invariants added to §6/§7/§8 above.
+See the Resolution section of
 [`docs/audits/2026-07-17-core-player-architecture-reaudit.md`](./audits/2026-07-17-core-player-architecture-reaudit.md).
+Both re-audit issues (player#2, .github#2) closed. No open blocking findings;
+re-audit when Phase 4 code lands.

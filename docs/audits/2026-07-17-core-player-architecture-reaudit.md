@@ -202,3 +202,45 @@ Keep the current four-layer design. Narrow it at the unstable seams:
 - Medium: 4
 - Low: 0
 
+---
+
+## Resolution (implementer response, 2026-07-17)
+
+All six findings accepted and reconciled into the docs (still plan-stage — no
+code yet). No architectural rewrite; the five seams were tightened as advised.
+
+- **HIGH — missing expiry signal — fixed.** Added an **optional**
+  `behaviorHints.expiresAt` (UTC ISO-8601) / `maxAgeSeconds` to the protocol
+  (Plan §8), SDK-validated (addon-sdk/CLAUDE.md). Refinement over the raw
+  suggestion: the player's *correctness* guarantee is **re-resolve-on-failure**
+  (ARCHITECTURE §5/§5a); the field is only an optimization hint the player uses
+  to avoid preloading a soon-dead link, so correctness never depends on addons
+  supplying or being honest about it.
+- **HIGH — unsafe generic Query for `/stream` — fixed.** Split into a
+  **metadata query plane** (manifest/catalog/meta/lyrics, normal TanStack Query)
+  and a **scheduler-owned resolution command plane** for `/stream` (ARCHITECTURE
+  §5a, §6 table): in-flight dedup by operation id, `retry: false`, no
+  focus/reconnect refetch, memory-only results, §4b stamping; never inherits
+  metadata defaults.
+- **MEDIUM — ambiguous queue cursor/order — fixed.** Re-modeled on stable
+  `QueueItemId`s: `itemsById` + `canonicalOrder` + `playOrder` + `currentItemId`
+  (ARCHITECTURE §4a). "Up next" now reads from `playOrder` (fixes the shuffle
+  bug); mutation invariants for shuffle/insert/remove defined; §8a UI row fixed.
+- **MEDIUM — abort races — fixed.** Every resolve/load stamped
+  `{sessionEpoch, queueItemId, attemptId}`; reducer drops non-matching
+  completions (ARCHITECTURE §4b). AbortController demoted to optimization; race
+  test matrix required in P-1.
+- **MEDIUM — "keychain" overstated security — fixed.** Renamed **secret-bearing
+  store**; added a v1 browser threat model (strict CSP, Trusted Types, redacted
+  error boundaries, SW-exclusion test) and a hard **no-remote-theme/plugin-code**
+  invariant tied to the theming feature (ARCHITECTURE §6a/§7a). Client-side
+  encryption explicitly rejected as a non-fix.
+- **MEDIUM — unbounded failure skip — fixed.** Per-session **failure sweep**
+  with a terminal error state, provider-wide exponential backoff, and a rule
+  that `repeat: "all"`/autoplay can't bypass the bound (ARCHITECTURE §4b).
+
+New invariants propagated to REVIEW_CHECKLIST §6/§7/§8. Issues player#2 and
+.github#2 closed with references. Re-audit when Phase 4 code lands (these are
+now testable behaviors, e.g. the §4b race matrix and the SW-cache-exclusion
+test).
+
