@@ -148,6 +148,13 @@ material promise.
 
 Two artifacts per audit, both required:
 
+**Approval gate:** preparing edits is allowed, but before creating any commit,
+pushing any branch/commit, or creating/editing/closing any GitHub issue, the
+auditor must show the intended action and obtain explicit user approval. Audit
+instructions authorize the review, not publication or issue-tracker mutation.
+Approval for one named action does not become standing approval for later
+commits, pushes, or issues.
+
 1. **Audit report** — a new file at
    `.github/docs/audits/YYYY-MM-DD-<short-scope>.md` (e.g.
    `2026-08-01-stream-debrid.md`), committed and pushed to the `.github`

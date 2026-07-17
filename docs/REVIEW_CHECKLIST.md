@@ -210,12 +210,12 @@ checklist §9; the "never synced" invariant is intentionally reversed (see §7).
 See ARCHITECTURE §6b and Plan §3/§7/§9/§10 (Phase 5b). This design is included
 in the product-wide plan audit below; re-audit again when Phase 5b code lands.
 
-**Product-wide plan audit (2026-07-17): does not pass — 2 high, 5 medium,
-1 low.** The technical macro-architecture and documented legal invariants are
-sound, but first-run playback has no in-product route to discover/install a
-manifest and the album-track ID scheme collides across MusicBrainz media.
-UI/accessibility acceptance criteria and four optional-sync boundaries
-(conflict ordering, server provisioning/discovery, encryption key lifecycle,
-active-device ownership) also require decisions at their stated phase gates.
-See
+**Product-wide plan audit (2026-07-17, revised after scope clarification): does
+not pass — 1 high.** The technical macro-architecture and documented legal
+invariants are sound. Manifest-only addon installation is intentional;
+accessibility, advanced offline conflict handling, advanced encryption key
+lifecycle, and concurrent-device playback are deferred and are not findings.
+Basic encryption at rest remains required. The sole blocker is the album-track
+ID scheme, which collides across MusicBrainz media and does not clearly separate
+track identity from recording identity. See
 [`docs/audits/2026-07-17-product-wide-plan.md`](./audits/2026-07-17-product-wide-plan.md).
