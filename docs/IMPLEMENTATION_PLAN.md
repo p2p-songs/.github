@@ -13,6 +13,16 @@ player ever asks for it. A **discovery/metadata layer** is informed by
 split, though Spotube itself has no addon protocol or debrid layer (§4).
 The player and core never speak BitTorrent — that's the whole point.
 
+> **Precedence rule (read first).** The project is now split across **four
+> GitHub repos** — `.github` (this doc + cross-repo docs), `player`,
+> `addon-sdk`, `addons` — not the single monorepo an early draft of this doc
+> sketched. For anything about the **player / core engine**, the authoritative
+> source is [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md);
+> where this plan and that document differ about the player, that document
+> wins. This plan remains authoritative for the **protocol, addons,
+> `stream-debrid`, and the legal model.** Repo layout is §9; per-repo build
+> order lives in each repo (the player's is ARCHITECTURE.md §10).
+
 ---
 
 ## 1. How Stremio Actually Works (the part we're copying)
@@ -83,10 +93,13 @@ exactly, not just gesturing at:
 
 Applying this exactly to our project:
 
-- **`music-addon-sdk` + `music-core` + `player-app` stay fully neutral.**
-  They ship with zero bundled stream sources beyond what a user installs by
-  pasting a manifest URL. This is the layer that needs to be as clean as
-  Stremio-the-app — don't let it default-install `stream-debrid`.
+- **The `addon-sdk` and `player` repos stay fully neutral.** They ship with
+  zero bundled stream sources beyond what a user installs by pasting a manifest
+  URL. This is the layer that needs to be as clean as Stremio-the-app — don't
+  let it default-install `stream-debrid`. (Note: the player *does* end up
+  holding the user's debrid key inside a configured addon URL — see
+  ARCHITECTURE §6a — but that's the user's own credential handled as a secret,
+  not a bundled source.)
 - **`stream-debrid` can be hosted the same way Torrentio is — publicly, if
   you want — as long as the same two invariants hold:** it never stores or
   caches audio files on its own infrastructure (it only ever holds
@@ -192,10 +205,10 @@ to change the architecture. What it does contribute:
 
 ```mermaid
 flowchart LR
-    subgraph Client["Player App (web)"]
-        UI[React UI: library, search, now-playing]
-        Core[music-core state machine]
-        AudioCtl["Audio Controller — audio tag + queue + YouTube embed"]
+    subgraph Client["Player App (web) — see player/docs/ARCHITECTURE.md"]
+        UI["React UI (themeable) — library, search, now-playing"]
+        Core["core engine — queue + playback FSM + resolution scheduler"]
+        AudioCtl["Audio subsystem — dual audio elements + YouTube embed"]
         UI <--> Core
         Core --> AudioCtl
     end
@@ -222,7 +235,7 @@ flowchart LR
     DebridClient -. "torrent downloaded on debrid's\nservers — never touches our infra" .-> Swarm((BitTorrent swarm))
 ```
 
-The player and `music-core` never see a torrent, an `infoHash`, or a
+The player and its core engine never see a torrent, an `infoHash`, or a
 BitTorrent client — everything inside the `stream-debrid` subgraph is that
 addon's own internal implementation detail.
 
@@ -232,8 +245,8 @@ addon's own internal implementation detail.
 
 | Area | Decision | Why |
 |---|---|---|
-| Language | TypeScript everywhere except the optional Rust stretch phase | One language across SDK, addons, core, player. |
-| Monorepo | pnpm workspaces (+ Turborepo) | Addons, SDK, core, player app live together. |
+| Language | TypeScript everywhere. (No Rust: the earlier "Rust/WASM stretch" is retired — web-only removes the cross-platform reason for it; see ARCHITECTURE §1.) | One language across SDK, addons, player. |
+| Repo structure | **Four separate GitHub repos** — `.github`, `player`, `addon-sdk`, `addons` (§9) — **not** a single monorepo | An early draft proposed one pnpm monorepo; the project was deliberately split into independent repos. The `player` repo is a single Vite app internally (ARCHITECTURE §8), not a package workspace. |
 | Addon transport | Reuse Stremio's protocol almost verbatim | Proven, minimal — the real work is audio-specific resources and the aggregator. |
 | ID namespace | MusicBrainz ID (MBID) primary, ISRC secondary `idPrefix` | Open, canonical, IMDb-equivalent. |
 | Metadata source | MusicBrainz API + Cover Art Archive + **ListenBrainz** | Confirmed by Spotube's own stack (§4) — all three are free, no-API-key, ToS-clean. |
@@ -245,7 +258,7 @@ addon's own internal implementation detail.
 | Player architecture | **Superseded by [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)** — web-native layered engine (scoped playback state machine + TanStack Query + Dexie + Zustand), single Vite app with a lint-enforced pure-`core`/`ui` boundary | Web-only removes the cross-platform constraint that justified Stremio's Elm-in-Rust core. See that doc for the full reasoning; the rows below are the high-level summary. |
 | Player app | React + Vite + TypeScript | Fast dev loop; keeps native-shell reuse open without committing to it now. |
 | Playback | Dual `<audio>` + volume-automation crossfade (CORS-independent) for direct URLs; YouTube IFrame for `stream-ytmusic`; `MediaSession API` + PWA for background/OS integration | Core crossfade avoids Web Audio on purpose — cross-origin debrid links taint the Web Audio graph. See ARCHITECTURE §4c. |
-| Storage | Dexie (IndexedDB) for library/playlists/addons/settings/history; TanStack Query for addon HTTP cache | Music library grows large and needs indexed local search. Debrid keys never live in the player. See ARCHITECTURE §6. |
+| Storage | Dexie (IndexedDB) for library/playlists/addons/settings/history; TanStack Query for addon HTTP cache (in-memory). Resolved stream URLs are memory-only, never persisted. | Music library grows large and needs indexed local search. A configured addon URL contains the user's debrid key, so the player holds it as a **secret** (ARCHITECTURE §6a) — the earlier "keys never live in the player" claim was audited false and corrected. See ARCHITECTURE §6. |
 | Streaming server | **Cut from MVP** — Phase 8 stretch only | Debrid links are already direct HTTPS. |
 | Operating model | `stream-debrid` never stores audio itself and always resolves debrid using the requesting user's own credentials from `/configure` — never a shared/pooled account; protocol/SDK/core/player stay neutral and never bundle it by default | See §3 — this is the legal-compliance decision, not just an infra one. Public hosting (à la Torrentio) is fine as long as those invariants hold. |
 | Addon hosting | Stateless addons (`musicmeta`, `catalog-charts`, `stream-legal`, `stream-ytmusic`, `lyrics-lrclib`) → Cloudflare Workers/Vercel functions. `stream-debrid` → small always-on Node service (outbound calls to indexers + debrid APIs need a persistent process, not a functions runtime). | Same shape as how Torrentio itself is deployed. |
@@ -289,24 +302,35 @@ before responding.
 
 ## 9. Repo Layout
 
+**Four independent GitHub repos under the `p2p-songs` org** (not one monorepo):
+
 ```
-p2p-songs/
-  packages/
-    music-addon-sdk/       # analog of stremio-addon-sdk
-    music-core/            # Elm-style state machine (Msg/Effect/Model)
-    debrid-clients/        # shared debrid API adapters: Real-Debrid, AllDebrid, Premiumize, TorBox
-    player-app/            # React/Vite web player
-  addons/
-    musicmeta/             # MusicBrainz + Cover Art Archive
-    catalog-charts/        # MusicBrainz browse + ListenBrainz trending/similar
-    stream-legal/          # Jamendo / Internet Archive / FMA
-    stream-ytmusic/        # ytId-style, official YouTube embed
-    stream-debrid/         # Torrentio-style: discovery + aggregation + debrid resolution, one addon
-      discovery/            # queries multiple indexers/trackers, dedupes + ranks
-      debrid/               # -> uses packages/debrid-clients
-    lyrics-lrclib/          # lyrics via lrclib.net
+p2p-songs/.github         # org profile + cross-repo docs (this plan lives here)
   docs/
     IMPLEMENTATION_PLAN.md
+    REVIEW_CHECKLIST.md
+    ADVERSARIAL_REVIEW_CONTRACT.md
+    audits/
+
+p2p-songs/player          # web-only player — single Vite app (see its docs/ARCHITECTURE.md)
+  src/
+    core/                 #   headless engine: queue · playback FSM · scheduler · addon client · audio · persistence
+    ui/                   #   React UI: themeable (viewmodels + theme contract + themes)
+    app/                  #   Vite entry, router, providers
+  docs/ARCHITECTURE.md    #   AUTHORITATIVE for the player (supersedes player details in this plan)
+
+p2p-songs/addon-sdk       # analog of stremio-addon-sdk; owns the canonical @p2p-songs/protocol types
+                          # (+ shared debrid-client adapters used by stream-debrid)
+
+p2p-songs/addons          # our reference addons (each installable/deployable on its own)
+  musicmeta/              #   MusicBrainz + Cover Art Archive
+  catalog-charts/         #   MusicBrainz browse + ListenBrainz trending/similar
+  stream-legal/           #   Jamendo / Internet Archive / FMA
+  stream-ytmusic/         #   ytId-style, official YouTube embed
+  lyrics-lrclib/          #   lyrics via lrclib.net
+  stream-debrid/          #   Torrentio-style: discovery + aggregation + debrid resolution, one addon
+    discovery/            #     queries multiple indexers/trackers, dedupes + ranks
+    debrid/               #     uses the shared debrid-client adapters
 ```
 
 ---
@@ -314,10 +338,11 @@ p2p-songs/
 ## 10. Phases
 
 ### Phase 0 — Study (no code)
-Read the addon protocol docs (`stremio-addon-sdk/docs/api/`), skim
-`stremio-core`'s Msg/Effect pattern, install Torrentio into a real Stremio
-client and look at its own `/configure` page (debrid key entry, indexer/
-quality options) — that's the actual UX spec for `stream-debrid`'s
+Read the addon protocol docs (`stremio-addon-sdk/docs/api/`); skim
+`stremio-core`'s Msg/Effect pattern for context on how Stremio does it
+(we deliberately don't copy it — see ARCHITECTURE §1); install Torrentio into
+a real Stremio client and look at its own `/configure` page (debrid key entry,
+indexer/quality options) — that's the actual UX spec for `stream-debrid`'s
 `/configure` page (§2) — and skim [Spotube](https://github.com/krtirtho/spotube)'s
 plugin docs to see its metadata/audio-source split first-hand (note: it has
 no addon protocol or debrid layer of its own, §4).
@@ -329,7 +354,7 @@ stream/lyrics object shapes (§8 is the draft — lock it in as `v0.1`).
 **Exit criteria:** hand-written `manifest.json` + one hand-written
 `/stream/track/mbid:...json` response, validated against your own schema.
 
-### Phase 2 — `music-addon-sdk`
+### Phase 2 — `addon-sdk`
 `addonBuilder()`, `defineCatalogHandler`/`defineMetaHandler`/
 `defineStreamHandler`/`defineLyricsHandler`, CORS'd Express router,
 `serveHTTP()`, and a `/configure` route helper (config read back out of the
@@ -356,28 +381,37 @@ configurable world" addon whose manifest URL embeds a config value.
 `curl`; `stream-debrid` returns a playable direct URL for a real album
 given a real debrid API key.
 
-### Phase 4 — `music-core`
-Addon collection (install by manifest URL), aggregated search/catalog,
-library/favorites, player state, settings. `dispatch(msg) -> effects[] ->
-runEffects() -> new model -> notify subscribers`.
+### Phase 4 — Player core engine (headless)
+**Built per [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)
+§10 (its P-1…P-4)** — that document is authoritative here. Not the retired
+Elm `Msg/Effects/Model` core: it's a web-native layered engine (queue model +
+scoped playback FSM + resolution/prefetch scheduler + addon client), a single
+Vite app with a lint-enforced `core`/`ui` boundary, headless-testable with
+fake audio + fake resolver.
 
-**Exit criteria:** headless — a Node script installs `stream-debrid`,
-browses a catalog, resolves a track to a playable URL, zero UI.
+**Exit criteria:** headless — a Node/test script installs `stream-debrid`,
+browses a catalog, and JIT-resolves a track to a playable URL, zero UI.
 
-### Phase 5 — Player App
-Addon manager (install by manifest URL), search/browse, now-playing bar,
-queue view. `<audio>` wrapper with gapless crossfade via `bingeGroup`,
-YouTube IFrame embed fallback for `stream-ytmusic`, `MediaSession API`.
+### Phase 5 — Player app (UI + PWA)
+**Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless
+viewmodels + theme contract + one reference theme), addon manager (install by
+manifest URL), search/browse, now-playing, queue; dual-`<audio>` playback with
+crossfade + `MediaSession`; YouTube IFrame for `stream-ytmusic`; PWA.
 
-**Exit criteria:** install `stream-debrid` + `musicmeta`, browse, play a
-full album gapless off direct debrid links, control it from OS media keys.
+**Exit criteria:** install `stream-debrid` + `musicmeta`, browse, play a full
+album with **measured** track-to-track continuity (inter-track silence under
+the threshold defined in ARCHITECTURE §4c on the named browser×codec matrix,
+crossfade fallback where a combo can't meet it), and control it from OS media
+keys. (Note: "gapless" is a measured target, not an absolute guarantee.)
 
-### Phase 6 (stretch) — Rust/WASM Core Port
-Port `music-core` to Rust/WASM, mirroring `stremio-core-web`'s `env` trait
-bridge pattern.
+### Phase 6 (retired) — Rust/WASM core port
+**Not planned.** Web-only removes the cross-platform constraint that was the
+only reason to port the core to Rust/WASM (ARCHITECTURE §1). Reconsider *only*
+if a native shell (Phase 7) is ever built and code sharing demands it.
 
 ### Phase 7 (stretch) — Native Shell / Casting
-Tauri/Electron shell; Chromecast/AirPlay once the web player is solid.
+Tauri/Electron shell reusing the same web player (`src/core` promotes to a
+package if needed); Chromecast/AirPlay once the web player is solid.
 
 ### Phase 8 (optional, lowest priority) — Local Torrent Fallback
 A `webtorrent`-based Node service for uncached-torrent/no-debrid fallback,

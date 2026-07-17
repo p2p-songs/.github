@@ -14,8 +14,8 @@ findings get delivered back) see
 Each item names which repo(s) it applies to and which plan section it comes from.
 
 ## 1. Protocol neutrality (`player`, `addon-sdk`)
-- [ ] `player`/`music-core` never bundles, default-installs, or hardcodes
-      *any* specific stream addon (including `stream-debrid`). Addon
+- [ ] The `player` (its `src/core` engine) never bundles, default-installs, or
+      hardcodes *any* specific stream addon (including `stream-debrid`). Addon
       installation is exclusively "user pastes a manifest URL." — Plan §3
 - [ ] `addon-sdk` imposes no assumptions about what kind of stream source
       an addon built with it uses — it's transport/protocol tooling only,
@@ -74,6 +74,14 @@ Each item names which repo(s) it applies to and which plan section it comes from
 - [ ] No debrid API keys, indexer credentials, or other secrets are ever
       committed to any repo, used as a default/fallback, or logged. Config
       lives only in the per-request `/configure`-encoded value.
+- [ ] **Player-side reality (corrected):** a *configured* stream addon's
+      manifest URL contains the user's debrid key, and the player necessarily
+      holds it to call the addon — so the player must treat configured addon
+      URLs as **secrets**: stored as credential material, never
+      logged/exported/telemetered, config segment redacted in any UI display,
+      and excluded from service-worker/HTTP caching. Do **not** accept (or
+      write) a claim that "the player never holds the key" — that was audited
+      as false. — Plan §7; ARCHITECTURE §6a
 
 ## 8. Core engine (`player`)
 The player architecture is specified in detail in
@@ -92,15 +100,23 @@ Audit the player against that doc, not against a stremio-core port.
       whole-queue-upfront. Resolving the entire queue eagerly (expiring
       debrid links, hammering debrid APIs) is an anti-pattern — flag it.
       — ARCHITECTURE §5, §11
-- [ ] No debrid keys / indexer config anywhere in the player; it only ever
-      handles already-resolved URLs or a `ytId`. (Same as §1/§7.)
-      — ARCHITECTURE §11
+- [ ] Resolved media is memory-only: resolved stream URLs /
+      `QueueItem.resolution` and the `/stream` query cache are never persisted;
+      queue items hydrate to `resolution: idle` and re-resolve. Persisting
+      bearer stream links is a defect. — ARCHITECTURE §6, §11
+- [ ] Configured addon URLs are handled as secrets in the player (see §7
+      above) — not the false "no keys in the player" claim. — ARCHITECTURE §6a
+- [ ] "Gapless" is validated as a measured target (silence threshold on a
+      browser×codec matrix, same-origin test fixtures), not asserted as an
+      absolute; crossfade is the documented fallback. — ARCHITECTURE §4c
 
 ## Current status (update as phases land)
 As of 2026-07-17, all four repos (`​.github`, `player`, `addon-sdk`,
 `addons`) still contain planning/scaffolding only; no runtime implementation
-exists. The core-player plan was audited on 2026-07-17. Verdict: **changes
-required** (2 high, 2 medium). The configured-addon credential model and the
-master plan's stale Elm/Phase 4 instructions must be reconciled before player
-implementation begins. See
+exists. The core-player plan was audited on 2026-07-17 (verdict: changes
+required — 2 high, 2 medium); **all four findings have since been reconciled
+into the docs** (credential model corrected, master plan de-Elm'd and moved to
+the real 4-repo layout, resolved-media persistence made memory-only, gapless
+reframed as a measured target). See the Resolution section of
 [`docs/audits/2026-07-17-core-player-plan.md`](./audits/2026-07-17-core-player-plan.md).
+No open blocking findings; re-audit when Phase 4 code lands.

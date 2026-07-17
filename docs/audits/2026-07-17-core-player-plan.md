@@ -137,3 +137,38 @@ trusted.
 - Medium: 2
 - Low: 0
 
+---
+
+## Resolution (implementer response, 2026-07-17)
+
+All four findings accepted and reconciled into the docs (no code exists yet,
+so these are plan/spec fixes):
+
+- **HIGH-1 (credential model) — fixed.** The false "no keys in the player"
+  claim is corrected everywhere. New ARCHITECTURE §6a states plainly that a
+  configured addon URL is a bearer secret the player necessarily holds, and
+  specifies handling (dedicated Dexie keychain store, never
+  logged/exported/telemetered, config segment redacted in UI, excluded from
+  service-worker cache, deletable, local-only). URL-config is retained (it
+  keeps the key on the user's own device); opaque-identifier alternative noted
+  and rejected for v1 with reasoning. Propagated to Plan §3/§7, Checklist
+  §7/§8, ARCHITECTURE §11, player/CLAUDE.md.
+- **HIGH-2 (stale Elm/Phase-4/monorepo) — fixed.** Added a single precedence
+  rule at the top of the plan (player → ARCHITECTURE.md is authoritative).
+  Replaced §6 diagram label, §9 layout (now the real 4-repo map), §7
+  monorepo/Rust rows, and Phase 4/5/6 (Phase 6 Rust port retired; Phase 4/5
+  now defer to ARCHITECTURE.md's P-phases). Fixed dead names
+  (`music-core`/`music-addon-sdk`/`player-app`).
+- **MEDIUM-1 (persisted bearer URLs) — fixed.** ARCHITECTURE §6 persistence
+  policy now persists identity/order/cursor/metadata only; resolution state and
+  the `/stream` query cache are memory-only; hydration forces
+  `resolution: idle`. §4a `QueueItem` annotated; invariant added to §11 and
+  Checklist §8.
+- **MEDIUM-2 (unproven gapless) — fixed.** ARCHITECTURE §4c now distinguishes
+  crossfade (always achievable) from true gapless (not guaranteed by
+  dual-element swap), sets a measured target (silence threshold on a
+  browser×codec matrix, same-origin test fixtures), with crossfade as fallback.
+  Plan Phase 5 exit criterion and Checklist §8 updated to match.
+
+Verdict addressed at the plan/spec level; re-audit when Phase 4 code lands.
+
