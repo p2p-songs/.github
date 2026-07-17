@@ -97,8 +97,10 @@ Audit the player against that doc, not against a stremio-core port.
       — ARCHITECTURE §11
 
 ## Current status (update as phases land)
-As of the last update, all four repos (`​.github`, `player`, `addon-sdk`,
-`addons`) contain only scaffolding — a README and this documentation set.
-No implementation code exists yet, so none of the above has been built or
-violated. Nothing to audit yet beyond the plan itself. Update this section
-(or note it in each PR) as phases from Plan §10 land.
+As of 2026-07-17, all four repos (`​.github`, `player`, `addon-sdk`,
+`addons`) still contain planning/scaffolding only; no runtime implementation
+exists. The core-player plan was audited on 2026-07-17. Verdict: **changes
+required** (2 high, 2 medium). The configured-addon credential model and the
+master plan's stale Elm/Phase 4 instructions must be reconciled before player
+implementation begins. See
+[`docs/audits/2026-07-17-core-player-plan.md`](./audits/2026-07-17-core-player-plan.md).
