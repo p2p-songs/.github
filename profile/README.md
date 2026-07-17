@@ -9,9 +9,10 @@ actual architecture by reimplementing its shape for audio.
 
 ## Repos
 
-- [`player`](https://github.com/p2p-songs/player) — the player app + core state machine
+- [`player`](https://github.com/p2p-songs/player) — the player app + core engine
 - [`addon-sdk`](https://github.com/p2p-songs/addon-sdk) — SDK for building addons
 - [`addons`](https://github.com/p2p-songs/addons) — reference addons (metadata, catalog, legal/YouTube/debrid streams, lyrics)
+- [`backend`](https://github.com/p2p-songs/backend) — optional, self-hosted accounts + sync (Supabase)
 
 See [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md) for the
 full architecture, tech decisions, and phased build order.

@@ -13,10 +13,11 @@ player ever asks for it. A **discovery/metadata layer** is informed by
 split, though Spotube itself has no addon protocol or debrid layer (§4).
 The player and core never speak BitTorrent — that's the whole point.
 
-> **Precedence rule (read first).** The project is now split across **four
-> GitHub repos** — `.github` (this doc + cross-repo docs), `player`,
-> `addon-sdk`, `addons` — not the single monorepo an early draft of this doc
-> sketched. For anything about the **player / core engine**, the authoritative
+> **Precedence rule (read first).** The project is split across **five GitHub
+> repos** — `.github` (this doc + cross-repo docs), `player`, `addon-sdk`,
+> `addons`, and `backend` (optional self-hosted accounts/sync, added later) —
+> not the single monorepo an early draft of this doc sketched. For anything
+> about the **player / core engine**, the authoritative
 > source is [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md);
 > where this plan and that document differ about the player, that document
 > wins. This plan remains authoritative for the **protocol, addons,
@@ -121,6 +122,17 @@ Applying this exactly to our project:
   every Stremio+debrid user today.
 - **`stream-legal` remains the always-uncontroversial path** — build and
   demo on it first, exactly as before.
+- **The optional sync backend is a new actor with its own posture.** The
+  project now includes an **optional, self-hosted** accounts/sync backend so a
+  user can log in and carry their addons + listening state across devices (see
+  [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)
+  §6b, and the `backend` repo). Because synced addon configs contain the
+  user's debrid key, running the backend means **holding that credential** —
+  which is fine when it's *self-hosted* (your own key on your own server, like
+  self-hosting Vaultwarden), but a **public multi-tenant instance would make
+  its operator custodian of many users' debrid keys** — a real liability and a
+  shift toward "operator." The supported/recommended model is self-hosted;
+  login is never mandatory (the app works fully local-only logged out).
 
 ---
 
@@ -258,7 +270,9 @@ addon's own internal implementation detail.
 | Player architecture | **Superseded by [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)** — web-native layered engine (scoped playback state machine + TanStack Query + Dexie + Zustand), single Vite app with a lint-enforced pure-`core`/`ui` boundary | Web-only removes the cross-platform constraint that justified Stremio's Elm-in-Rust core. See that doc for the full reasoning; the rows below are the high-level summary. |
 | Player app | React + Vite + TypeScript | Fast dev loop; keeps native-shell reuse open without committing to it now. |
 | Playback | Dual `<audio>` + volume-automation crossfade (CORS-independent) for direct URLs; YouTube IFrame for `stream-ytmusic`; `MediaSession API` + PWA for background/OS integration | Core crossfade avoids Web Audio on purpose — cross-origin debrid links taint the Web Audio graph. See ARCHITECTURE §4c. |
-| Storage | Dexie (IndexedDB) for library/playlists/addons/settings/history; TanStack Query for addon HTTP cache (in-memory). Resolved stream URLs are memory-only, never persisted. | Music library grows large and needs indexed local search. A configured addon URL contains the user's debrid key, so the player holds it as a **secret** (ARCHITECTURE §6a) — the earlier "keys never live in the player" claim was audited false and corrected. See ARCHITECTURE §6. |
+| Storage (local) | Dexie (IndexedDB) for library/playlists/addons/settings/history; TanStack Query for addon HTTP cache (in-memory). Resolved stream URLs are memory-only, never persisted. | Music library grows large and needs indexed local search. A configured addon URL contains the user's debrid key, so the player holds it as a **secret** (ARCHITECTURE §6a) — the earlier "keys never live in the player" claim was audited false and corrected. See ARCHITECTURE §6. |
+| Accounts & sync (**optional, additive**) | Self-hosted **Supabase** (Postgres + GoTrue auth + RLS), in a new `backend` repo; client sync adapter reconciles Dexie ⇄ backend (last-writer-wins per record). App works fully logged-out; login backs up + syncs addons/library/listening-state across devices. | Reverses the original "no server" assumption per product requirement. BaaS so we don't reinvent auth (same logic as Dexie/TanStack Query); **fully self-hostable, no Firebase** — deploy on a rented box via Docker. PocketBase noted as a lighter self-host alternative. See ARCHITECTURE §6b. |
+| Credential sync model | **Server-readable, not zero-knowledge** (Stremio's model): the backend can read synced configured URLs (incl. debrid key). Made responsible by self-hosting (your key on your server) + encryption-at-rest + TLS + RLS. | Deliberate call for recovery/UX; the earlier "never synced" invariant is intentionally reversed. Public multi-tenant hosting is a different, un-blessed posture (operator holds many users' keys) — §3. |
 | Streaming server | **Cut from MVP** — Phase 8 stretch only | Debrid links are already direct HTTPS. |
 | Operating model | `stream-debrid` never stores audio itself and always resolves debrid using the requesting user's own credentials from `/configure` — never a shared/pooled account; protocol/SDK/core/player stay neutral and never bundle it by default | See §3 — this is the legal-compliance decision, not just an infra one. Public hosting (à la Torrentio) is fine as long as those invariants hold. |
 | Addon hosting | Stateless addons (`musicmeta`, `catalog-charts`, `stream-legal`, `stream-ytmusic`, `lyrics-lrclib`) → Cloudflare Workers/Vercel functions. `stream-debrid` → small always-on Node service (outbound calls to indexers + debrid APIs need a persistent process, not a functions runtime). | Same shape as how Torrentio itself is deployed. |
@@ -322,7 +336,7 @@ before responding.
 
 ## 9. Repo Layout
 
-**Four independent GitHub repos under the `p2p-songs` org** (not one monorepo):
+**Five independent GitHub repos under the `p2p-songs` org** (not one monorepo):
 
 ```
 p2p-songs/.github         # org profile + cross-repo docs (this plan lives here)
@@ -351,6 +365,11 @@ p2p-songs/addons          # our reference addons (each installable/deployable on
   stream-debrid/          #   Torrentio-style: discovery + aggregation + debrid resolution, one addon
     discovery/            #     queries multiple indexers/trackers, dedupes + ranks
     debrid/               #     uses the shared debrid-client adapters
+
+p2p-songs/backend         # OPTIONAL self-hosted accounts + sync (player ARCHITECTURE §6b)
+                          #   self-hosted Supabase: Postgres + GoTrue auth + RLS
+                          #   docker self-host config · DB schema/migrations · RLS policies
+                          #   the player's sync adapter (Dexie ⇄ backend) lives in the player repo
 ```
 
 ---
@@ -423,6 +442,19 @@ album with **measured** track-to-track continuity (inter-track silence under
 the threshold defined in ARCHITECTURE §4c on the named browser×codec matrix,
 crossfade fallback where a combo can't meet it), and control it from OS media
 keys. (Note: "gapless" is a measured target, not an absolute guarantee.)
+
+### Phase 5b — Accounts & sync (optional; `backend` repo)
+**Built per ARCHITECTURE.md §6b (its P-7).** Self-hosted Supabase (Postgres +
+GoTrue auth + RLS) in the `backend` repo; a client sync adapter reconciles
+Dexie ⇄ backend (last-writer-wins per record). **Additive over the local-first
+app — login is never mandatory.** Syncs addons/library/playlists/listening
+state; resolved stream URLs never sync. Configured-URL secret is server-readable
+(the user's own key on the user's own self-hosted server) under encryption-at-
+rest + TLS + RLS (§3, §6b).
+
+**Exit criteria:** stand up the backend on a rented box via Docker; log in on
+device A, add a configured addon + a playlist; log in on device B and see both;
+RLS-verified per-user isolation; confirm no resolved stream URL is ever synced.
 
 ### Phase 6 (retired) — Rust/WASM core port
 **Not planned.** Web-only removes the cross-platform constraint that was the

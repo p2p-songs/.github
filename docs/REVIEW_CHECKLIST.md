@@ -86,6 +86,13 @@ Each item names which repo(s) it applies to and which plan section it comes from
       and excluded from service-worker/HTTP caching. Do **not** accept (or
       write) a claim that "the player never holds the key" — that was audited
       as false. — Plan §7; ARCHITECTURE §6a
+- [ ] **Sync of the secret is now permitted, under conditions (updated
+      2026-07-17):** the earlier "configured URLs are never synced" rule is
+      **intentionally reversed** — logged in, they sync to the user's own
+      backend (server-readable, Stremio's model). This is NOT a regression to
+      flag *provided* it stays: (a) optional (app works logged-out), (b)
+      self-hosted as the supported model, (c) encryption-at-rest + TLS + RLS,
+      (d) the client-side rules above still hold. — Plan §3/§7; ARCHITECTURE §6b
 - [ ] The secret store is **not** called a "keychain" and is not presented as a
       security boundary (same-origin script can read it). A v1 browser threat
       model is required: strict CSP (no `unsafe-inline`/`eval`), Trusted Types
@@ -146,10 +153,31 @@ Audit the player against that doc, not against a stremio-core port.
       autoplay must not create an unbounded resolve/fail/skip loop. —
       ARCHITECTURE §4b
 
+## 9. Accounts & sync backend (`backend`, `player`)
+Applies once Phase 5b lands; the `backend` repo is optional and self-hosted.
+- [ ] **Login is optional / app is local-first:** the player must work fully
+      without an account; sync is additive, never a gate. — ARCHITECTURE §6b
+- [ ] **Per-user isolation via RLS:** Postgres Row-Level Security ensures a
+      user can only ever read/write their own rows. No endpoint returns another
+      user's data. — ARCHITECTURE §6b
+- [ ] **Service key never ships to the client;** only the anon/public key does.
+      — ARCHITECTURE §6b
+- [ ] **Secret at rest:** synced configured-URL/config columns are encrypted at
+      rest; TLS in transit. Server-readable is accepted by decision, but
+      plaintext-at-rest in the DB file is not. — ARCHITECTURE §6b; Plan §7
+- [ ] **Resolved media never syncs:** resolved stream URLs / `QueueItem.resolution`
+      / `/stream` results are never sent to the backend — only queue *identity*
+      and durable library/settings. — ARCHITECTURE §6/§6b
+- [ ] **Self-hostable, no proprietary lock-in:** the backend must deploy on a
+      rented server (Docker); no Firebase or non-self-hostable dependency. A
+      public multi-tenant deployment is an un-blessed, different-posture choice
+      (operator holds many users' keys) — Plan §3. — ARCHITECTURE §6b
+
 ## Current status (update as phases land)
-As of 2026-07-17, all four repos (`​.github`, `player`, `addon-sdk`,
-`addons`) still contain planning/scaffolding only; no runtime implementation
-exists. The core-player plan was audited on 2026-07-17 (verdict: changes
+As of 2026-07-17, the repos (`​.github`, `player`, `addon-sdk`, `addons`, and
+`backend` — the 5th, added for optional accounts/sync) contain
+planning/scaffolding only; no runtime implementation exists. The core-player
+plan was audited on 2026-07-17 (verdict: changes
 required — 2 high, 2 medium); **all four findings have since been reconciled
 into the docs** (credential model corrected, master plan de-Elm'd and moved to
 the real 4-repo layout, resolved-media persistence made memory-only, gapless
@@ -170,5 +198,14 @@ model + no-remote-theme-code invariant (§6a/§7a); failure skip-ahead bounded b
 a per-session sweep + backoff (§4b). New invariants added to §6/§7/§8 above.
 See the Resolution section of
 [`docs/audits/2026-07-17-core-player-architecture-reaudit.md`](./audits/2026-07-17-core-player-architecture-reaudit.md).
-Both re-audit issues (player#2, .github#2) closed. No open blocking findings;
-re-audit when Phase 4 code lands.
+Both re-audit issues (player#2, .github#2) closed. No open blocking findings.
+
+**Design change (2026-07-17): optional accounts & sync added.** The original
+"no server, local-only" assumption was reversed by product decision: users can
+log in to sync addons + listening state across devices via an **optional,
+self-hosted** backend (self-hosted Supabase). The credential-sync model is
+**server-readable, not zero-knowledge** (Stremio's model), made responsible by
+self-hosting + encryption-at-rest + TLS + RLS. New `backend` repo; new
+checklist §9; the "never synced" invariant is intentionally reversed (see §7).
+See ARCHITECTURE §6b and Plan §3/§7/§9/§10 (Phase 5b). Not yet audited — flag
+for the next audit pass. Re-audit when Phase 4 (and later Phase 5b) code lands.
