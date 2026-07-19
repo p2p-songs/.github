@@ -289,3 +289,16 @@ discriminated union enforcing type↔id identity, and `playlist` gets its own
 versioned wire spec now exists at `addon-sdk/docs/PROTOCOL.md`; (4) an explicit
 multi-disc + bonus-disc album-track fixture was added. **46 vitest tests pass;
 typecheck + build + built-package runtime probes green.** Re-audit to confirm.
+
+**Phase 2 — `@p2p-songs/addon-sdk` implemented (2026-07-19).** `packages/sdk`:
+`AddonBuilder` (manifest validation + handler-registration guards), typed
+`define*Handler`s, a **framework-agnostic** `createRouter` (`{method,url}` ⇒
+`{status,headers,body}`) with a thin `serveHTTP` node:http adapter over it (no
+Express — an intentional divergence from the plan's original wording), and the
+`/configure` round-trip (`encodeConfig`/`decodeConfig`, base64url path segment,
+default configure page). The router enforces the protocol at the boundary: CORS
++ OPTIONS, recording-keyed stream/lyrics (400 on a non-recording id), and
+**response-schema validation** (an invalid handler response is a 500). 22 SDK
+tests incl. a live hello-world served over HTTP; 68 total across the workspace;
+typecheck + build green. **Not yet audited — A-005 is the next review target.**
+Next: Phase 3 reference addons (`stream-legal` first).

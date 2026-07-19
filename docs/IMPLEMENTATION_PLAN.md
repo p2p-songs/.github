@@ -489,14 +489,21 @@ stream/lyrics object shapes (§8 is the draft — lock it in as `v0.1`).
 **Exit criteria:** hand-written `manifest.json` + one hand-written
 `/stream/track/mbid:...json` response, validated against your own schema.
 
-### Phase 2 — `addon-sdk`
-`addonBuilder()`, `defineCatalogHandler`/`defineMetaHandler`/
-`defineStreamHandler`/`defineLyricsHandler`, CORS'd Express router,
-`serveHTTP()`, and a `/configure` route helper (config read back out of the
-URL path on every request) since `stream-debrid` needs it from day one.
+### Phase 2 — `addon-sdk` — DONE (2026-07-19)
+`AddonBuilder` + `defineCatalogHandler`/`defineMetaHandler`/
+`defineStreamHandler`/`defineLyricsHandler`, a CORS'd **framework-agnostic**
+router (`createRouter` → `{method,url}` ⇒ `{status,headers,body}`; a thin
+`serveHTTP()` node:http adapter sits over it — no Express dependency), and the
+`/configure` round-trip (`encodeConfig`/`decodeConfig` — base64url config
+segment read back out of the URL path on every request) since `stream-debrid`
+needs it from day one. The SDK validates every handler response against the
+protocol schemas and re-exports `@p2p-songs/protocol`.
 
-**Exit criteria:** a "hello world" addon in <20 lines; a "hello
-configurable world" addon whose manifest URL embeds a config value.
+**Exit criteria (met):** a "hello world" stream addon in <20 lines served over
+real HTTP (test), and the config round-trip proven (a base64url config segment
+decodes back to the handler's `config` arg). 22 SDK tests.
+
+**Not yet audited** — an SDK audit (A-005) is the next review target.
 
 ### Phase 3 — Reference Addons
 1. `musicmeta` — MBID → metadata + cover art
