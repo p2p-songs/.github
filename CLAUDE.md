@@ -1,12 +1,13 @@
 # CLAUDE.md — .github
 
 This repo has no application code. It's the docs/coordination hub for the
-p2p-songs project, which spans four repos under the `p2p-songs` GitHub org:
+p2p-songs project, which spans **five** repos under the `p2p-songs` GitHub org:
 
 - **`.github`** (this repo) — org profile (`profile/README.md`) + docs
-- **`player`** — player app + `music-core` state machine
-- **`addon-sdk`** — SDK for building addons (music equivalent of `stremio-addon-sdk`)
+- **`player`** — web-only player: single Vite app, `src/core` engine + `src/ui` (web-native, NOT an Elm/`music-core` port — see its `docs/ARCHITECTURE.md`)
+- **`addon-sdk`** — SDK for building addons (music equivalent of `stremio-addon-sdk`); owns the canonical `@p2p-songs/protocol` types
 - **`addons`** — reference addons, including `stream-debrid`
+- **`backend`** — optional, self-hosted accounts + sync (Supabase); the app works fully without it
 
 Start here regardless of which repo you're actually working in:
 
