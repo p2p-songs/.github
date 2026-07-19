@@ -100,6 +100,24 @@ Each item names which repo(s) it applies to and which plan section it comes from
       `maxAgeSeconds` int) is validated by the SDK when present, and is treated
       everywhere as an **optional hint** — never a required field, never the
       basis of a correctness guarantee. — Plan §8; ARCHITECTURE §5a
+- [ ] **The SDK router validates the route content `type`**: `stream`/`lyrics`
+      require literal `track`; `catalog`/`meta` require a protocol `ContentType`;
+      anything else is a 404, never a handler call with a contradictory type.
+      Malformed percent-encoding / bad requests are controlled `4xx`, never an
+      escaped `URIError`/500. — Protocol §5/§6 (audit A-005)
+
+### 6a. SDK credential-boundary safety (`addon-sdk`) — audit A-005
+- [ ] A request whose path carries a config segment is **secret-bearing**: its
+      manifest, `/configure`, and resource responses are `Cache-Control:
+      no-store, private` — **never** `public`/shared caching (the segment holds
+      the debrid key). Unconfigured requests may cache normally. — Checklist §7
+- [ ] **Error bodies are opaque** — a failure returns a stable `err` string
+      only, never a handler/provider exception message (which can contain the
+      credential). Diagnostics go only to the opt-in `onError` hook. — Checklist §7
+- [ ] **`configurationRequired` fails closed**: the router rejects a resource
+      request (400) unless a valid config decoded — a handler is never invoked
+      without credentials, so no fallback to an operator account is possible. A
+      malformed config prefix is a 400, not a silent downgrade. — Plan §3; §3 above
 
 ## 7. Secrets hygiene (all repos)
 - [ ] No debrid API keys, indexer credentials, or other secrets are ever
@@ -303,9 +321,19 @@ tests incl. a live hello-world served over HTTP; 68 total across the workspace;
 typecheck + build green.
 
 **A-005 addon SDK implementation audit (2026-07-19): changes required — 2
-critical, 3 medium.** A-004 reconciliation is confirmed. Phase 2 is not signed
-off: configured secret-bearing paths are marked public-cacheable; raw handler
-exception messages can disclose credentials; stream/lyrics route types are not
-enforced; `configurationRequired` fails open; and malformed percent encoding
-escapes the router response boundary. See
+critical, 3 medium.** A-004 reconciliation is confirmed. Phase 2 was not signed
+off: configured secret-bearing paths were marked public-cacheable; raw handler
+exception messages could disclose credentials; stream/lyrics route types were not
+enforced; `configurationRequired` failed open; and malformed percent encoding
+escaped the router response boundary. See
 [`docs/audits/2026-07-19-addon-sdk-implementation.md`](./audits/2026-07-19-addon-sdk-implementation.md).
+
+**A-005 reconciled (2026-07-19).** All five addressed in the SDK router/serve:
+secret-bearing configured paths → `no-store, private` (never public); client
+error bodies opaque (`{ err }`) with an opt-in `onError` diagnostics hook so
+exception messages never reach callers; route content types validated
+(stream/lyrics require `track`); `configurationRequired` fails closed (400) with
+a malformed config prefix → 400; malformed percent-encoding → controlled 400.
+New invariants in §6/§6a above. **32 SDK tests (10 new A-005 regressions in
+`test/security.test.ts`); 78 total; typecheck + build + built-package
+adversarial probes green.** Re-audit to confirm.

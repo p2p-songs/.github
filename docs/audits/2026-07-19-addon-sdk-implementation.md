@@ -1,7 +1,7 @@
 # Addon SDK Implementation Audit
 
 - **Audit ID:** A-005
-- **Status:** CHANGES REQUIRED — 2 critical, 3 medium
+- **Status:** RECONCILED — all 5 findings addressed 2026-07-19 (see Resolution); re-audit invited to confirm
 - **Supersedes:** A-004 for current implementation sign-off; confirms A-004 reconciliation
 - **Audited commits:** `.github` `5beae91569aac1d85a331bdbf2524a9c290dfe6b`; `addon-sdk` `edfb8654a8505027a6eb2e64171683485b70822e`; `player` `af63ee23746ff6d601aa420439bed5540845c6dd`; `addons` `459cb5bb5017ae69d29f7e5c5b948e62e51b8493`; `backend` `682adc7ed6b5db10d37db9b8a344b65b663e17f9`
 - **Last updated:** 2026-07-19
@@ -102,4 +102,42 @@ inherited by every reference addon.
 - Source/runtime inspection confirmed configured manifests receive `Cache-Control: public, max-age=3600`.
 - A-004 reconciliation confirmed: 46 protocol tests cover HTTPS scheme rejection, type↔ID identity, playlist IDs, and the explicit bonus-disc fixture; `docs/PROTOCOL.md` exists and agrees with the implemented shapes reviewed here.
 - No code in `player`, `addon-sdk`, `addons`, or `backend` was modified by this audit.
+
+## Resolution (2026-07-19, implementer)
+
+All five findings addressed in `@p2p-songs/addon-sdk` (`router.ts`, `serve.ts`,
+`types.ts`); docs synced (PROTOCOL.md §6/§7, Review Checklist §6/§6a + status,
+addon-sdk `CLAUDE.md`). New regression suite: `packages/sdk/test/security.test.ts`.
+
+- **[CRITICAL] Secret-bearing paths were public-cacheable → FIXED.** The router
+  now flags any request whose path carries a config segment as secret-bearing
+  and serves its manifest, `/configure`, and resource responses
+  `Cache-Control: no-store, private`, overriding any handler cache hint. The
+  `/configure` page is always `no-store` (it can echo the config). Unconfigured
+  responses keep normal caching. Tests assert the header for configured
+  manifest + resource, and that public caching survives for unconfigured.
+- **[CRITICAL] Exception details could disclose credentials → FIXED.** Handler
+  and router-level failures now return an opaque `{ err }` body (no `detail`).
+  The `node:http` adapter does the same. Raw errors go only to an opt-in
+  `RouterOptions.onError(err, ctx)` hook (implementer redacts). A regression test
+  throws `provider rejected key <SECRET>`; the response body contains neither the
+  message nor the secret, while `onError` still receives the raw error.
+- **[MEDIUM] Non-track stream/lyrics types accepted → FIXED.** The router
+  validates the route content type: `stream`/`lyrics` require literal `track`,
+  `catalog`/`meta` require a protocol `ContentType`, else 404 (handler not
+  invoked). Handler arg types tightened (`type: "track"` / `type: ContentType`).
+- **[MEDIUM] `configurationRequired` failed open → FIXED.** When true, the router
+  rejects a resource request with 400 unless a valid config decoded — the handler
+  never runs without credentials. A malformed config prefix that precedes a real
+  route is a 400 (`invalid configuration`), not a silent downgrade; a lone junk
+  segment stays a 404.
+- **[MEDIUM] Malformed percent-encoding escaped the boundary → FIXED.** Id and
+  extra-segment decoding is wrapped so a `URIError` becomes a controlled 400
+  (`bad request`) inside the router's `Promise<RouterResponse>` contract.
+
+Verification: **32 SDK tests (10 new), 78 total**; `pnpm typecheck` + `pnpm
+build` clean; built-package probes replay the audit's four runtime cases —
+`stream/artist` → 404, malformed percent-encoding → 400 (no throw), a
+secret-bearing handler exception → opaque 500 with no secret in the body, and a
+configured manifest → `no-store, private`.
 - No GitHub issues were created; publication awaits explicit user approval.
