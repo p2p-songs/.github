@@ -30,6 +30,12 @@ Each item names which repo(s) it applies to and which plan section it comes from
       merging their results (the AIOStreams shape). That pattern was
       explicitly tried and reverted — if it reappears, it's a regression,
       not a feature. — Plan §2
+- [ ] **Within-album-torrent file selection is explicit, not "largest file."**
+      Requests are keyed by `mbid:recording:` but music torrents are whole
+      albums; `stream-debrid` selects the correct track file by disc+track
+      position when album context (`mbid:track:`/`mbid:release:`) is present,
+      else by title+duration match. The player still receives only a resolved
+      `url` (file selection is internal). — Plan §2a, §8
 
 ## 3. `stream-debrid` legal invariants (`addons`)
 - [ ] It never persists or caches resolved **audio bytes** on its own

@@ -69,16 +69,51 @@ AIOStreams is a different, separate pattern — set aside for now, per your
 call.) Internally that's still two clean, testable modules, just not
 exposed as a network-callable boundary:
 
-- **Discovery/aggregation:** `queryIndexers(track) -> Candidate[]` — fans
+- **Discovery/aggregation:** `queryIndexers(request) -> Candidate[]` — fans
   out to whatever Jackett/Prowlarr-style indexers are configured, de-dupes
   and ranks the combined results.
-- **Resolution:** `resolveViaDebrid(candidate) -> url` — cache-checks and
-  calls the configured debrid provider's API, "as it sees fit": cached
-  result → resolve immediately; nothing cached → either skip it or (if you
-  choose to support it) trigger a download on the debrid side and poll.
+- **File selection (music-specific — the step Torrentio doesn't need):**
+  `pickFile(candidate, request) -> fileIdx`. See below.
+- **Resolution:** `resolveViaDebrid(candidate, fileIdx) -> url` — cache-checks
+  and calls the configured debrid provider's API for **that specific file**,
+  "as it sees fit": cached → resolve immediately; nothing cached → either skip
+  it or (if you choose to support it) trigger a download on the debrid side and
+  poll.
 
-`discover -> resolve -> dedupe/sort/label -> respond`, all inside one
-addon, one `/configure` page, one deployment.
+`discover -> pick file -> resolve -> dedupe/sort/label -> respond`, all inside
+one addon, one `/configure` page, one deployment.
+
+### 2a. Resolving a **recording** to a file in an **album** torrent
+
+This is where the entity-typed ID scheme (§8) becomes operationally
+load-bearing, and where music diverges from video. A movie torrent is
+effectively one file, so Torrentio just takes the largest file. A **music
+torrent is a whole album (release)** — one `infoHash` with many track files
+across one or more discs — so "largest file" is meaningless (all tracks are
+similar size). `stream-debrid` must pick the *right track file*.
+
+The `/stream` request carries **`mbid:recording:<uuid>`** ("what song") plus,
+when the player has it, the album-context **`mbid:track:<uuid>` /
+`mbid:release:<uuid>`** ("which pressing, which disc+position"). `stream-debrid`
+uses them like this:
+
+1. **Target a release.** With album context, aim discovery at torrents for that
+   release; without it (e.g. a radio pick from a bare recording), choose a
+   canonical release the recording appears on (via MusicBrainz) and target that.
+2. **Match the file.** Given the album torrent's file list, select the file for
+   the track: **by disc + track position when album context is present**
+   (deterministic — this is why `mbid:track:` matters), else by fuzzy
+   title + duration match against the recording's metadata.
+3. **Resolve that file.** Hand the chosen `fileIdx` to the debrid client;
+   cache-check and unrestrict → a direct URL to *that one track file*. The
+   player still only ever receives a fully-resolved `url` (never an `infoHash`/
+   `fileIdx`), consistent with §8 — the file selection is entirely internal.
+
+So: yes, the recording-as-streamable-unit model works with the debrid addon —
+in fact the recording/track split is what lets `stream-debrid` deterministically
+pick the correct file inside a multi-track album torrent instead of guessing.
+Passing album context whenever the player has it is what keeps step 2
+deterministic; the fuzzy fallback covers the context-free case.
 
 ---
 
