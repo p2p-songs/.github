@@ -6,15 +6,19 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-003** | 2026-07-17 | [Product-wide plan](./2026-07-17-product-wide-plan.md) | **OPEN — 1 high; no sign-off** | A-001 and A-002 for current plan sign-off | [addon-sdk#1](https://github.com/p2p-songs/addon-sdk/issues/1) |
+| **A-003** | 2026-07-17 | [Product-wide plan](./2026-07-17-product-wide-plan.md) | **RESOLVED — the 1 high reconciled 2026-07-18; plan signed off for the declared scope** | A-001 and A-002 for current plan sign-off | None ([addon-sdk#1](https://github.com/p2p-songs/addon-sdk/issues/1) closed) |
 | A-002 | 2026-07-17 | [Core-player architecture re-audit](./2026-07-17-core-player-architecture-reaudit.md) | Resolved; historical | A-001 for core architecture | None |
 | A-001 | 2026-07-17 | [Core-player plan](./2026-07-17-core-player-plan.md) | Resolved; historical | — | None |
 
 ## Current decision
 
-The overall architecture is accepted in direction but is **not signed off for
-implementation** until A-003's album-track identity finding is reconciled
-across the plan, checklist, canonical protocol types, player, and addons.
+A-003's album-track identity finding was reconciled on 2026-07-18 (entity-typed
+MBIDs; recording is the streamable/cache/dedup unit; synthetic
+`release:track-number` removed; multi-disc/vinyl/same-recording fixtures
+required) across the plan (§5/§8), checklist (§6), `addon-sdk` contract, and the
+player model. **The plan is signed off for implementation under the declared v1
+scope** (see A-003's "Declared scope decisions" for what is deferred). Re-audit
+when the first vertical slice of code lands.
 
 ## Reading rules
 

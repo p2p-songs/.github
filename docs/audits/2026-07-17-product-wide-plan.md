@@ -1,7 +1,7 @@
 # Product-wide Plan Audit — 2026-07-17
 
 - **Audit ID:** A-003
-- **Status:** OPEN — 1 high; no implementation sign-off
+- **Status:** RESOLVED (2026-07-18) — the 1 high reconciled; plan signed off for the declared scope
 - **Supersedes:** A-001 and A-002 for current plan sign-off
 - **Audited commits:** `.github@0fd8abe`, `player@3fc591e`,
   `addon-sdk@3629382`, `addons@37b02be`, `backend@16e378d`
@@ -123,3 +123,28 @@ Correct the track identity scheme and its protocol fixtures. Once that single
 finding is reconciled coherently across the plan, checklist, SDK contract, and
 player/addon consumers, this plan is ready for implementation under the
 declared scope.
+
+## Resolution (implementer response, 2026-07-18)
+
+Finding accepted and reconciled. The ID scheme is now **entity-typed
+MusicBrainz IDs**: `mbid:<entity>:<uuid>` for `artist` / `release` /
+`recording` / `track`. The synthetic `mbid:<release-mbid>:<track-number>`
+composite is **removed** — it collided across discs (track position is
+medium-scoped) and broke on free-text vinyl numbers.
+
+Entity semantics are now explicit: **the recording is the atomic streamable
+unit** — `stream`/`lyrics` are keyed by `mbid:recording:<uuid>`, which is also
+the queue/cache/dedup key; `mbid:track:<uuid>` (native release+medium identity)
+is carried alongside as **album context** (ordering, disc grouping,
+`bingeGroup`) and is never what a stream resolves against. This resolves both
+the collision and the track-vs-recording ambiguity.
+
+Required identity fixtures added to the SDK contract: multi-disc (disc1-t1 ≠
+disc2-t1), vinyl/free-text number (`A4`), bonus disc, and same-recording-on-
+two-releases (one recording id, two track ids).
+
+Propagated across: Plan §5 (concept mapping) + §8 (ID scheme, stream object,
+fixtures); REVIEW_CHECKLIST §6; `addon-sdk/CLAUDE.md`; player
+`docs/ARCHITECTURE.md` §4a (`QueueItem.track` → recording/track/release ids,
+recording = cache key). addon-sdk#1 closed with references. Sign-off condition
+met for the declared scope; re-audit when the first vertical slice lands.

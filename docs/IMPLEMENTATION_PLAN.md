@@ -200,8 +200,8 @@ to change the architecture. What it does contribute:
 
 | Stremio (video) | This project (audio) | Notes |
 |---|---|---|
-| `movie` / `series` types | `artist` / `album` / `track` / `playlist` types | Track is the atomic streamable unit, like an episode. |
-| IMDb ID (`tt1234567`) namespace | **MusicBrainz ID (MBID)** primary, `isrc:` secondary idPrefix | Open, canonical, freely-reusable — the direct IMDb equivalent. |
+| `movie` / `series` types | `artist` / `album` / `track` / `playlist` types | The atomic **streamable** unit is the **recording** (the song), not the release-track — see §8. Album/track ids give ordering context. |
+| IMDb ID (`tt1234567`) namespace | **entity-typed MusicBrainz IDs** (`mbid:recording:…`, `mbid:release:…`, `mbid:artist:…`, `mbid:track:…`), `isrc:` secondary | Open, canonical. The naive `tt…:season:episode` composite doesn't map onto MB's medium-scoped tracks + track/recording split — §8. |
 | Cinemeta (official meta addon) | **`musicmeta`** — MusicBrainz + Cover Art Archive | Same role: canonical metadata for anything named by ID. |
 | Catalog addon (Top IMDb, etc.) | `catalog-charts` — MusicBrainz browse + **ListenBrainz** trending/similar-artist data | ListenBrainz addition confirmed by Spotube (§4). |
 | **Torrentio** (single addon: scrape many trackers + own debrid resolve) | **`stream-debrid`** — single addon: query many indexers + own debrid resolve | Primary stream source, and the addon shape we're actually copying — see §2. |
@@ -283,12 +283,37 @@ addon's own internal implementation detail.
 
 **Content types:** `artist`, `album`, `track`, `playlist`
 
-**Resources:** `catalog`, `meta`, `stream`, `lyrics`
+**ID scheme — entity-typed MusicBrainz IDs (revised per audit A-003).**
+IDs are **`mbid:<entity>:<uuid>`**, where `<entity>` names the exact
+MusicBrainz entity. We do **not** synthesize composite IDs like
+`release-mbid:track-number` — that scheme was audited and removed because
+MusicBrainz track *position* is scoped to a **medium** (disc), so multi-disc
+albums collide (disc 1 / disc 2 both have a "track 1"), and track numbers can
+be free text (vinyl `A4`).
 
-**ID scheme:**
-- Canonical: `mbid:<musicbrainz-uuid>` for artist/album/track
-- Album tracks: `mbid:<release-mbid>:<track-number>`, mirroring Stremio's
-  `tt1234567:1:2` (imdbId:season:episode).
+| Entity id | MusicBrainz entity | Role |
+|---|---|---|
+| `mbid:artist:<uuid>` | Artist | — |
+| `mbid:release:<uuid>` | Release | an **album** (a specific release) |
+| `mbid:recording:<uuid>` | Recording | **the song/audio itself** — identity is shared across every release it appears on |
+| `mbid:track:<uuid>` | Track | a recording **as it appears on one release+medium** (carries disc/position identity natively; no collision, no free-text-number problem) |
+
+`isrc:<code>` remains a secondary `idPrefix`.
+
+**Recording is the atomic *streamable* unit.** `stream`/`lyrics` are keyed by
+**`mbid:recording:<uuid>`** — that is what `stream-debrid` actually searches
+for and resolves ("Artist – Song"), and it's the right identity for the queue,
+cache keys, and dedup (the same song is one streamable thing regardless of
+which pressing it came from). The **track** id (`mbid:track:<uuid>`) is carried
+*alongside* for **album context** — ordering within a release, disc grouping,
+gapless `bingeGroup` — but is never the thing you resolve a stream against.
+(This replaces the old Stremio `tt…:season:episode` composite analogy, which
+doesn't map cleanly onto MusicBrainz's track/recording split.)
+
+**Resources:** `catalog`, `meta`, `stream`, `lyrics`. `stream` and `lyrics` are
+requested against a **`mbid:recording:<uuid>`** (the streamable unit); an
+optional album-context `mbid:track:<uuid>` may accompany the request so an
+addon can prefer the exact release pressing when it matters.
 
 **Stream object** — three shapes in practice, one per addon tier:
 
@@ -296,13 +321,21 @@ addon's own internal implementation detail.
 // stream-legal / stream-debrid: fully resolved, direct
 { "url": "https://…/track.flac", "name": "FLAC · cached",
   "behaviorHints": {
-    "bingeGroup": "album:<release-mbid>", "filename": "…",
+    "bingeGroup": "mbid:release:<uuid>",  // album grouping for gapless auto-advance
+    "filename": "…",
     "expiresAt": "2026-07-17T21:30:00Z"   // optional; see "Link expiry" below
   } }
 
 // stream-ytmusic: official embed, mirrors Stremio's native ytId field
 { "ytId": "dQw4w9WgXcQ", "name": "YouTube Music" }
 ```
+
+**Identity test fixtures (required, per audit A-003).** The SDK's protocol
+schema tests must cover: a **multi-disc release** (disc 1 track 1 vs disc 2
+track 1 must be distinct ids), a **vinyl/free-text track number** (`A4`), a
+**bonus disc**, and the **same recording appearing on two releases** (one
+`mbid:recording:` id, two `mbid:track:` ids). These are the cases the old
+`release:track-number` scheme silently corrupted.
 
 **Link expiry (optional signal).** Resolved debrid/CDN `url`s are often bearer
 links that expire, but the player has no neutral way to know when (parsing

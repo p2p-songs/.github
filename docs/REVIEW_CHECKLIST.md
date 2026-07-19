@@ -63,9 +63,19 @@ Each item names which repo(s) it applies to and which plan section it comes from
 ## 6. Protocol/ID conformance (`addon-sdk`, `addons`)
 - [ ] Content types are `artist`/`album`/`track`/`playlist`; resources are
       `catalog`/`meta`/`stream`/`lyrics`. — Plan §8
-- [ ] Canonical IDs are `mbid:<musicbrainz-uuid>`; album tracks are
-      `mbid:<release-mbid>:<track-number>`; `isrc:` is the secondary
-      `idPrefix`. — Plan §8
+- [ ] IDs are **entity-typed** — `mbid:<entity>:<uuid>` with entity ∈
+      `artist`/`release`/`recording`/`track`; `isrc:` secondary. The old
+      synthetic `mbid:<release-mbid>:<track-number>` form is **removed** (it
+      collides across discs and breaks on free-text vinyl numbers) — flag it if
+      it reappears. — Plan §8
+- [ ] **`stream`/`lyrics` are keyed by `mbid:recording:<uuid>`** (the streamable
+      unit), not by a release-track. `mbid:track:<uuid>` may accompany a request
+      as album context only. Never resolve a stream against a bare
+      release+track-number. — Plan §8
+- [ ] SDK protocol schema tests cover the identity fixtures: **multi-disc**
+      (disc1-t1 ≠ disc2-t1), **vinyl/free-text number** (`A4`), **bonus disc**,
+      and **same recording on two releases** (one recording id, two track ids).
+      — Plan §8
 - [ ] Stream objects from `stream-legal`/`stream-debrid` are always fully
       resolved (`url` present); a bare `infoHash`/`fileIdx` pointer with no
       `url` should not come from any reference addon. — Plan §8
@@ -225,3 +235,12 @@ Basic encryption at rest remains required. The sole blocker is the album-track
 ID scheme, which collides across MusicBrainz media and does not clearly separate
 track identity from recording identity. See
 [`docs/audits/2026-07-17-product-wide-plan.md`](./audits/2026-07-17-product-wide-plan.md).
+
+**A-003 resolved (2026-07-18).** The album-track ID finding is reconciled:
+IDs are now **entity-typed** (`mbid:artist|release|recording|track:<uuid>`),
+the synthetic `release:track-number` composite is removed, **recording is the
+streamable/cache/dedup unit** (`stream`/`lyrics` keyed by `mbid:recording:`),
+`mbid:track:` is album context only, and multi-disc/vinyl/same-recording
+fixtures are required (§6 above; Plan §5/§8; addon-sdk contract; ARCHITECTURE
+§4a). addon-sdk#1 closed. **Plan is signed off for implementation under A-003's
+declared scope.** Re-audit when the first vertical slice of code lands.
