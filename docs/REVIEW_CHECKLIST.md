@@ -300,5 +300,12 @@ default configure page). The router enforces the protocol at the boundary: CORS
 + OPTIONS, recording-keyed stream/lyrics (400 on a non-recording id), and
 **response-schema validation** (an invalid handler response is a 500). 22 SDK
 tests incl. a live hello-world served over HTTP; 68 total across the workspace;
-typecheck + build green. **Not yet audited — A-005 is the next review target.**
-Next: Phase 3 reference addons (`stream-legal` first).
+typecheck + build green.
+
+**A-005 addon SDK implementation audit (2026-07-19): changes required — 2
+critical, 3 medium.** A-004 reconciliation is confirmed. Phase 2 is not signed
+off: configured secret-bearing paths are marked public-cacheable; raw handler
+exception messages can disclose credentials; stream/lyrics route types are not
+enforced; `configurationRequired` fails open; and malformed percent encoding
+escapes the router response boundary. See
+[`docs/audits/2026-07-19-addon-sdk-implementation.md`](./audits/2026-07-19-addon-sdk-implementation.md).
