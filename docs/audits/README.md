@@ -6,19 +6,20 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
+| **A-004** | 2026-07-19 | [Protocol implementation](./2026-07-19-protocol-implementation.md) | **OPEN — changes required (3 medium, 1 low)** | A-003 for current implementation sign-off | 3 medium, 1 low (report only) |
 | **A-003** | 2026-07-17 | [Product-wide plan](./2026-07-17-product-wide-plan.md) | **RESOLVED — the 1 high reconciled 2026-07-18; plan signed off for the declared scope** | A-001 and A-002 for current plan sign-off | None ([addon-sdk#1](https://github.com/p2p-songs/addon-sdk/issues/1) closed) |
 | A-002 | 2026-07-17 | [Core-player architecture re-audit](./2026-07-17-core-player-architecture-reaudit.md) | Resolved; historical | A-001 for core architecture | None |
 | A-001 | 2026-07-17 | [Core-player plan](./2026-07-17-core-player-plan.md) | Resolved; historical | — | None |
 
 ## Current decision
 
-A-003's album-track identity finding was reconciled on 2026-07-18 (entity-typed
-MBIDs; recording is the streamable/cache/dedup unit; synthetic
-`release:track-number` removed; multi-disc/vinyl/same-recording fixtures
-required) across the plan (§5/§8), checklist (§6), `addon-sdk` contract, and the
-player model. **The plan is signed off for implementation under the declared v1
-scope** (see A-003's "Declared scope decisions" for what is deferred). Re-audit
-when the first vertical slice of code lands.
+A-004 audits the first implementation slice, `@p2p-songs/protocol`, and requires
+changes: direct resource URLs accept arbitrary schemes, metadata type/identity
+pairings are unenforced while playlist identity is undefined, the Phase 1
+standalone protocol specification is absent, and the required bonus-disc test
+fixture is missing. **Implementation does not currently pass.** A-003 remains
+the resolved plan audit; its entity-typed recording/track decision is correctly
+represented in the implementation audited here.
 
 ## Reading rules
 
@@ -31,4 +32,3 @@ when the first vertical slice of code lands.
   the issue list—is the authoritative sequence and overall verdict.
 - Every new report must declare `Audit ID`, `Status`, `Supersedes`, `Audited
   commits`, and `Last updated` directly below its title, then update this table.
-

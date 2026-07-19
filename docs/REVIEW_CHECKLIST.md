@@ -259,3 +259,12 @@ streamable/cache/dedup unit** (`stream`/`lyrics` keyed by `mbid:recording:`),
 fixtures are required (§6 above; Plan §5/§8; addon-sdk contract; ARCHITECTURE
 §4a). addon-sdk#1 closed. **Plan is signed off for implementation under A-003's
 declared scope.** Re-audit when the first vertical slice of code lands.
+
+**First implementation audit A-004 (2026-07-19): changes required — 3 medium,
+1 low.** The `@p2p-songs/protocol` package passes its 26 tests, typecheck, and
+build, and correctly represents the central recording/track identity split.
+Current implementation sign-off is blocked because direct resource schemas
+accept arbitrary URL schemes, metadata permits contradictory content-type/ID
+pairs while playlist identity has no valid namespace, the Phase 1 standalone
+wire specification is absent, and the required bonus-disc fixture is not
+tested. See [`docs/audits/2026-07-19-protocol-implementation.md`](./audits/2026-07-19-protocol-implementation.md).
