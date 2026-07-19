@@ -508,7 +508,12 @@ decodes back to the handler's `config` arg). 22 SDK tests.
 ### Phase 3 — Reference Addons
 1. `musicmeta` — MBID → metadata + cover art
 2. `catalog-charts` — MusicBrainz + ListenBrainz-backed catalogs
-3. `stream-legal` — Jamendo/Internet Archive direct-URL streams
+3. `stream-legal` — Internet Archive (+ optional Jamendo) direct-URL streams —
+   **DONE (2026-07-19).** Zero-config; recording id → MusicBrainz metadata →
+   fixed source **allowlist** search → score/rank (drops weak matches + non-https)
+   → protocol streams. Sources/metadata injected behind interfaces; 16 tests
+   (incl. a fake-`fetch` Internet Archive adapter test and handler-via-SDK-router).
+   First reference addon / first end-to-end slice. Not yet audited.
 4. `stream-ytmusic` — `ytId`-style official YouTube embed
 5. `lyrics-lrclib` — lyrics resource
 6. **`stream-debrid`** — one self-contained addon, Torrentio's shape (§2):
