@@ -337,3 +337,13 @@ a malformed config prefix → 400; malformed percent-encoding → controlled 400
 New invariants in §6/§6a above. **32 SDK tests (10 new A-005 regressions in
 `test/security.test.ts`); 78 total; typecheck + build + built-package
 adversarial probes green.** Re-audit to confirm.
+
+**A-006 reference addons + SDK re-audit (2026-07-19): changes required — 1
+critical, 5 medium.** The SDK secret-cache fix misses method rejection:
+configured 405 responses lack `no-store`. `stream-legal` satisfies the literal
+fixed-catalog invariant, but its item-level “Legal Streams” language exceeds
+the rights evidence it checks (new product-trust finding). Additional findings:
+same-title wrong-artist matches pass; complete
+source outages become six-hour cached empty results; MusicBrainz's required
+rate limit is unenforced; and meta route type/ID contradictions are accepted.
+See [`docs/audits/2026-07-19-reference-addons.md`](./audits/2026-07-19-reference-addons.md).
