@@ -506,7 +506,13 @@ decodes back to the handler's `config` arg). 22 SDK tests.
 **Not yet audited** — an SDK audit (A-005) is the next review target.
 
 ### Phase 3 — Reference Addons
-1. `musicmeta` — MBID → metadata + cover art
+1. `musicmeta` — MBID → metadata + cover art — **DONE (2026-07-19).** Zero-config
+   catalog+meta addon (the music Cinemeta): MusicBrainz search → entity-typed
+   `metaPreview[]` per content type; MusicBrainz lookup → `metaDetail`, album meta
+   carrying `tracks[]` with both `recordingId` (streamable) + `trackId` (album
+   context: disc + free-text position) + Cover Art Archive posters. MB client
+   injected; 17 tests (incl. fake-`fetch` release→tracks parsing). The
+   discovery→stream loop is verified end-to-end with #3. Not yet audited.
 2. `catalog-charts` — MusicBrainz + ListenBrainz-backed catalogs
 3. `stream-legal` — Internet Archive (+ optional Jamendo) direct-URL streams —
    **DONE (2026-07-19).** Zero-config; recording id → MusicBrainz metadata →
