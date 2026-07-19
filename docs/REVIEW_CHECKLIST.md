@@ -195,10 +195,19 @@ Applies once Phase 5b lands; the `backend` repo is optional and self-hosted.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
-As of 2026-07-17, the repos (`​.github`, `player`, `addon-sdk`, `addons`, and
-`backend` — the 5th, added for optional accounts/sync) contain
-planning/scaffolding only; no runtime implementation exists. The core-player
-plan was audited on 2026-07-17 (verdict: changes
+**Implementation started (2026-07-18).** First code landed:
+**`@p2p-songs/protocol`** in the `addon-sdk` repo (`packages/protocol`) — the
+schema-first (zod) wire contract: entity-typed MBIDs, stream object + optional
+expiry hint, recording-keyed stream/lyrics requests, catalog/meta/manifest
+schemas. 26 vitest tests pass, including the A-003 identity fixtures
+(multi-disc, vinyl free-text, same-recording-on-two-releases); typecheck +
+build + Node runtime smoke all green. This is the foundation the SDK, addons,
+and the player addon-client all import. Everything else is still
+planning/scaffolding.
+
+Earlier: the repos (`​.github`, `player`, `addon-sdk`, `addons`, `backend`)
+were planning-only. The core-player plan was audited on 2026-07-17 (verdict:
+changes
 required — 2 high, 2 medium); **all four findings have since been reconciled
 into the docs** (credential model corrected, master plan de-Elm'd and moved to
 the real 4-repo layout, resolved-media persistence made memory-only, gapless
