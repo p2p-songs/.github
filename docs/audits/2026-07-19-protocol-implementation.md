@@ -1,7 +1,7 @@
 # Protocol Implementation Audit
 
 - **Audit ID:** A-004
-- **Status:** OPEN — changes required (3 medium, 1 low)
+- **Status:** RECONCILED — all 4 findings addressed 2026-07-19 (see Resolution); re-audit invited to confirm
 - **Supersedes:** A-003 for current implementation sign-off; A-003 remains the resolved plan audit
 - **Audited commits:** `.github` `3fbce816394e9cb20b7ab6ff88d4eeec7e127f3b`; `addon-sdk` `7eb05963e523f5e854a561ca6e63cc727ee2def3`; `player` `af63ee23746ff6d601aa420439bed5540845c6dd`; `addons` `459cb5bb5017ae69d29f7e5c5b948e62e51b8493`; `backend` `682adc7ed6b5db10d37db9b8a344b65b663e17f9`
 - **Last updated:** 2026-07-19
@@ -73,3 +73,33 @@ The implemented foundation gets the central A-003 decision right: MBIDs are enti
 - Built-package runtime probes confirmed acceptance of `http:`, `ftp:`, `javascript:`, and `data:` stream URLs and acceptance of an `artist` metadata object carrying a recording MBID.
 - `gh issue list` and `gh pr list` for `p2p-songs/addon-sdk`: no open entries returned at audit time.
 - No code in `player`, `addon-sdk`, `addons`, or `backend` was modified by this audit.
+
+## Resolution (2026-07-19, implementer)
+
+All four findings addressed in `@p2p-songs/protocol`; docs synced (Plan §8,
+Review Checklist §6 + Current status, addon-sdk `CLAUDE.md`).
+
+- **[MEDIUM] Arbitrary URL schemes → FIXED.** New `src/url.ts` exports a shared
+  `httpsUrlSchema` (`z.string().url()` + an `^https://` scheme refine). Applied
+  to `stream.url`, `lyric.url`, `poster`, `logo`, and `background`. `ytId` /
+  `infoHash` are not URLs and remain exempt. `test/url.test.ts` adds negative
+  cases for `http`/`ftp`/`file`/`data`/`javascript`, and a built-package runtime
+  probe confirms the four A-004 attack strings are now rejected.
+- **[MEDIUM] Type/identity contradictions + undefined playlist identity → FIXED.**
+  `metaPreviewSchema` and `metaDetailSchema` are now `z.discriminatedUnion("type", …)`:
+  `artist`→artist MBID, `album`→release MBID, `track`→recording MBID/ISRC,
+  `playlist`→a new `playlist:<token>` namespace (addon-scoped opaque token, no
+  colon; branded `playlistIdSchema`, `parseId` support). `test/meta.test.ts`
+  asserts each honest pairing is accepted and each contradiction rejected.
+- **[MEDIUM] Missing standalone spec → FIXED.** `addon-sdk/docs/PROTOCOL.md`
+  (v0.1) now defines transport rules, content types, the ID scheme incl.
+  playlist, HTTP routes, per-resource request/response payloads, empty-vs-error
+  behavior, `/configure`, versioning, and a worked hand-written manifest +
+  `/stream` validation example. The package README points to it.
+- **[LOW] Missing bonus-disc fixture → FIXED.** `test/album-fixtures.test.ts`
+  models a two-disc *deluxe* release with a bonus disc as real album-track
+  objects, asserting stable recording identity, distinct track identity across
+  the medium boundary, disc numbers, and a preserved free-text (`A4`) position.
+
+Verification after fixes: **46 vitest tests pass**; `pnpm typecheck` and
+`pnpm build` clean; built-package runtime probes confirm the rejections above.

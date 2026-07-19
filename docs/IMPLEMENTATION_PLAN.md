@@ -316,6 +316,12 @@ addon's own internal implementation detail.
 
 ## 8. Addon Protocol Spec (music version)
 
+> The **authoritative, standalone** wire spec (routes, payloads, error behavior,
+> examples, versioning) lives in [`addon-sdk` — `docs/PROTOCOL.md`](https://github.com/p2p-songs/addon-sdk/blob/main/docs/PROTOCOL.md),
+> with `@p2p-songs/protocol` as its machine-readable source of truth. This
+> section is the *design rationale* behind it. Where the two differ, PROTOCOL.md
+> + the schemas win.
+
 **Content types:** `artist`, `album`, `track`, `playlist`
 
 **ID scheme — entity-typed MusicBrainz IDs (revised per audit A-003).**
@@ -334,6 +340,28 @@ be free text (vinyl `A4`).
 | `mbid:track:<uuid>` | Track | a recording **as it appears on one release+medium** (carries disc/position identity natively; no collision, no free-text-number problem) |
 
 `isrc:<code>` remains a secondary `idPrefix`.
+
+**Playlist identity (added per audit A-004).** `playlist` is the one content
+type with no MusicBrainz entity behind it, so it gets its own namespace:
+`playlist:<token>`, an **addon-scoped opaque token** (`[A-Za-z0-9][A-Za-z0-9._~-]*`,
+no colon so it never looks like an MBID). A playlist has no canonical
+cross-addon identity — the addon that emits the id is the one that resolves its
+`/meta`. (The alternative, borrowing another entity's MBID or leaving `playlist`
+un-addressable, was rejected — an advertised content type must have an honest,
+stable id.)
+
+**Type ↔ identity is enforced (added per audit A-004).** A `meta` item's `type`
+determines which id namespace its `id` must use — `artist`→artist MBID,
+`album`→release MBID, `track`→recording MBID/ISRC, `playlist`→playlist id. The
+schema is a discriminated union, so an `album` carrying a recording id (etc.) is
+rejected on the wire, not silently routed under the wrong entity semantics.
+
+**All resource URLs are `https://` (added per audit A-004).** Every URL an addon
+returns for the client to fetch or play — `stream.url`, `lyric.url`, `poster`,
+`logo`, `background` — must be `https://`; the schemas reject `http`/`ftp`/
+`file`/`data`/`javascript`. `ytId` and `infoHash` are not URLs and are exempt.
+This is the secure-transport promise made enforceable at the trust boundary
+rather than left to each consumer.
 
 **Recording is the atomic *streamable* unit.** `stream`/`lyrics` are keyed by
 **`mbid:recording:<uuid>`** — that is what `stream-debrid` actually searches

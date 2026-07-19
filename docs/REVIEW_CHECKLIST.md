@@ -67,13 +67,24 @@ Each item names which repo(s) it applies to and which plan section it comes from
       fixed, audited set of sources, not an open redirector. — Plan §7
 
 ## 6. Protocol/ID conformance (`addon-sdk`, `addons`)
+- [ ] A **standalone, versioned** wire spec exists at `addon-sdk/docs/PROTOCOL.md`
+      (routes, payloads, error behavior, examples), and it agrees with the
+      `@p2p-songs/protocol` schemas. — Plan §8, §10 (Phase 1)
 - [ ] Content types are `artist`/`album`/`track`/`playlist`; resources are
       `catalog`/`meta`/`stream`/`lyrics`. — Plan §8
 - [ ] IDs are **entity-typed** — `mbid:<entity>:<uuid>` with entity ∈
-      `artist`/`release`/`recording`/`track`; `isrc:` secondary. The old
-      synthetic `mbid:<release-mbid>:<track-number>` form is **removed** (it
-      collides across discs and breaks on free-text vinyl numbers) — flag it if
-      it reappears. — Plan §8
+      `artist`/`release`/`recording`/`track`; `isrc:` secondary; `playlist:<token>`
+      (addon-scoped opaque, no colon) for playlists. The old synthetic
+      `mbid:<release-mbid>:<track-number>` form is **removed** (it collides
+      across discs and breaks on free-text vinyl numbers) — flag it if it
+      reappears. — Plan §8
+- [ ] **Content type ↔ id identity is enforced**: `meta` is a discriminated
+      union where `artist`→artist MBID, `album`→release MBID, `track`→recording
+      MBID/ISRC, `playlist`→playlist id. A type carrying a foreign id is rejected
+      on the wire. — Plan §8 (audit A-004)
+- [ ] **Every resource URL is `https://`** — `stream.url`, `lyric.url`, `poster`,
+      `logo`, `background` reject `http`/`ftp`/`file`/`data`/`javascript`;
+      `ytId`/`infoHash` exempt (not URLs). — Plan §8 (audit A-004)
 - [ ] **`stream`/`lyrics` are keyed by `mbid:recording:<uuid>`** (the streamable
       unit), not by a release-track. `mbid:track:<uuid>` may accompany a request
       as album context only. Never resolve a stream against a bare
@@ -261,10 +272,20 @@ fixtures are required (§6 above; Plan §5/§8; addon-sdk contract; ARCHITECTURE
 declared scope.** Re-audit when the first vertical slice of code lands.
 
 **First implementation audit A-004 (2026-07-19): changes required — 3 medium,
-1 low.** The `@p2p-songs/protocol` package passes its 26 tests, typecheck, and
+1 low.** The `@p2p-songs/protocol` package passes its tests, typecheck, and
 build, and correctly represents the central recording/track identity split.
-Current implementation sign-off is blocked because direct resource schemas
-accept arbitrary URL schemes, metadata permits contradictory content-type/ID
-pairs while playlist identity has no valid namespace, the Phase 1 standalone
-wire specification is absent, and the required bonus-disc fixture is not
+Current implementation sign-off was blocked because direct resource schemas
+accepted arbitrary URL schemes, metadata permitted contradictory content-type/ID
+pairs while playlist identity had no valid namespace, the Phase 1 standalone
+wire specification was absent, and the required bonus-disc fixture was not
 tested. See [`docs/audits/2026-07-19-protocol-implementation.md`](./audits/2026-07-19-protocol-implementation.md).
+
+**A-004 reconciled (2026-07-19).** All four findings addressed in
+`@p2p-songs/protocol`: (1) a shared `httpsUrlSchema` restricts `stream.url`,
+`lyric.url`, `poster`, `logo`, `background` to `https://` (rejects
+http/ftp/file/data/javascript), with negative tests; (2) `meta` is now a
+discriminated union enforcing type↔id identity, and `playlist` gets its own
+`playlist:<token>` addon-scoped namespace (Plan §8; §6 above); (3) the standalone
+versioned wire spec now exists at `addon-sdk/docs/PROTOCOL.md`; (4) an explicit
+multi-disc + bonus-disc album-track fixture was added. **46 vitest tests pass;
+typecheck + build + built-package runtime probes green.** Re-audit to confirm.
