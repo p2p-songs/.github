@@ -550,6 +550,16 @@ fake audio + fake resolver.
 **Exit criteria:** headless — a Node/test script installs `stream-debrid`,
 browses a catalog, and JIT-resolves a track to a playable URL, zero UI.
 
+**Player P-1 (ARCHITECTURE §10) — DONE (2026-07-20).** The headless engine is
+built and fully unit-tested against fakes: queue model (§4a), playback FSM (§4b),
+resolution+prefetch scheduler (§5/§5a), audio backend interface (§4c), and the
+engine orchestrator (JIT prefetch, ranked fallback → re-resolve → bounded
+skip-ahead circuit-breaker, full stamp-based async-race matrix). 38 tests;
+typecheck + build green. Next: P-3 real addon client (`Resolver` impl:
+metadata query plane + `/stream` command plane) + a live-addon e2e test against
+`musicmeta` + `stream-legal` (the headless exit-criteria run). P-2 real `<audio>`
+is browser-only; the fake backend carries headless P-1/P-3.
+
 ### Phase 5 — Player app (UI + PWA)
 **Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless
 viewmodels + theme contract + one reference theme), addon manager (install by
