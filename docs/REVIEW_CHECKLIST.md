@@ -242,6 +242,35 @@ Applies once Phase 5b lands; the `backend` repo is optional and self-hosted.
       public multi-tenant deployment is an un-blessed, different-posture choice
       (operator holds many users' keys) — Plan §3. — ARCHITECTURE §6b
 
+## 10. Finding calibration — avoid feedback for feedback's sake
+
+Apply these gates before including any audit finding. The goal is to identify
+demonstrated failures, not maximize finding count.
+
+- [ ] **Concrete evidence:** reproduce the behavior or establish it directly
+      from executable code. Architectural speculation is not a finding.
+- [ ] **Present scope:** audit what is implemented and promised in the current
+      phase. Do not fail standalone code for a future deployment topology, UI
+      integration, or operational model that has not landed.
+- [ ] **Observable consequence:** name exactly what breaks for the user, system,
+      security boundary, or documented invariant. Optional polish or theoretical
+      neatness is not blocking.
+- [ ] **Guarantee versus optimization:** distinguish correctness guarantees from
+      optional hints and optimizations. Missing an optimization is not a defect
+      when the required fallback preserves correctness.
+- [ ] **Proportional severity:** high/critical requires a broken explicit
+      invariant, unusable primary journey, legal breach, or exploitable security
+      failure. Medium requires a reproducible correctness or recovery failure.
+      Never inflate severity merely to encourage implementation.
+- [ ] **Composition without invented premises:** trace implemented components
+      together, but do not assume an undeclared hosting, scaling, or orchestration
+      model to manufacture a composition defect.
+- [ ] **Minimal useful feedback:** ask whether fixing this now materially reduces
+      real risk. If not, record it as a future review consideration or omit it.
+- [ ] **Reconsideration is rigor:** when challenged, reassess the requirement and
+      concrete impact rather than defending the finding. Remove findings that do
+      not survive scrutiny.
+
 ## Current status (update as phases land)
 **Start here:** the newest-first
 [`docs/audits/README.md`](./audits/README.md) registry is authoritative for the
