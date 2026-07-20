@@ -6,6 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
+| **A-007** | 2026-07-20 | [Player P-1 and A-006 reconciliation](./2026-07-20-player-p1.md) | **CHANGES REQUIRED — 1 high, 1 medium** | A-006 for current implementation sign-off | 2 pending publication/triage |
 | **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **RECONCILED — all 6 (1 critical, 5 medium) addressed 2026-07-20; re-audit to confirm** | A-005 for current implementation sign-off | None pending re-audit |
 | **A-005** | 2026-07-19 | [Addon SDK implementation](./2026-07-19-addon-sdk-implementation.md) | **RECONCILED — all 5 (2 critical, 3 medium) addressed 2026-07-19; re-audit to confirm** | A-004 for current implementation sign-off | None pending re-audit |
 | **A-004** | 2026-07-19 | [Protocol implementation](./2026-07-19-protocol-implementation.md) | **RECONCILED — all 4 findings (3 medium, 1 low) addressed 2026-07-19; re-audit to confirm** | A-003 for current implementation sign-off | None pending re-audit |
@@ -15,17 +16,11 @@ remain as history and may contain findings that were subsequently resolved.
 
 ## Current decision
 
-A-006 audited `stream-legal` + `musicmeta` and rechecked A-005, finding 1
-critical + 5 medium. **All six are now reconciled (2026-07-20):** the SDK detects
-the secret-bearing path before any method/OPTIONS early-return (configured 405/204
-are now `no-store, private`) and validates `meta` route type↔id identity on input;
-`stream-legal` now requires a recognized per-item CC/public-domain license (fail
-closed), requires artist agreement before matching, and distinguishes a total
-outage (retryable uncacheable error) from a genuine no-match (short cache); and a
-new shared `@p2p-songs/musicbrainz` package rate-limits MusicBrainz to ≤1 req/sec
-with 503 backoff. SDK 36 tests, addons 46 tests, built-package probes green; the
-reconciliation is recorded in the A-006 report's Resolution section. **A re-audit
-is invited to confirm sign-off.** A-003 remains the resolved plan audit.
+A-007 audits player P-1 and rechecks A-006. **Current implementation does not
+pass: 1 high and 1 medium finding.** Superseded resolve results can overwrite
+newer queue resolution state despite playback stamp checks; appending the first
+item leaves no current selection and `play()` is a no-op. A-006 is confirmed.
+A-003 remains the resolved plan audit.
 
 ## Reading rules
 

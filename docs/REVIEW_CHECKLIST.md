@@ -384,3 +384,10 @@ limiter + 503 backoff**, consumed by both addons. New invariants in §5/§6/§6a
 above. **SDK 36 tests; addons 46 tests (musicbrainz 7 + musicmeta 14 +
 stream-legal 25); typecheck + build + built-package adversarial probes green.**
 Re-audit to confirm.
+
+**A-007 player P-1 + A-006 reconciliation audit (2026-07-20): changes required
+— 1 high, 1 medium.** P-1's playback reducer drops stale stamps, but the engine
+commits stale scheduler outcomes into `QueueItem.resolution` before that check;
+an old attempt can overwrite a newer bearer URL. Empty-queue append leaves no
+current item so play is a no-op. A-006 is confirmed. See
+[`docs/audits/2026-07-20-player-p1.md`](./audits/2026-07-20-player-p1.md).
