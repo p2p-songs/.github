@@ -65,6 +65,19 @@ Each item names which repo(s) it applies to and which plan section it comes from
       Internet Archive, Free Music Archive). — Plan §4, §7
 - [ ] Does not proxy or resolve arbitrary user-supplied URLs — it's a
       fixed, audited set of sources, not an open redirector. — Plan §7
+- [ ] **Per-item license, fail closed (audit A-006):** a candidate is emitted
+      only if its own metadata carries a *recognized* open (CC / public-domain)
+      license — source-level provenance (hosted on the Archive) is **not**
+      sufficient. Absent / unknown / malformed / all-rights-reserved → dropped.
+      The "Legal Streams" presentation must not exceed the rights actually
+      checked. — Plan §3/§7
+- [ ] **Matching requires artist agreement (audit A-006):** an exact title with
+      a mismatched artist must not resolve — when artist metadata exists on both
+      sides, a minimum artist score is required before rank; duration is
+      corroboration only, never a substitute. — end-to-end user value
+- [ ] **Outage ≠ no-match (audit A-006):** a *total* source outage returns a
+      retryable, uncacheable error (not a long-lived cached empty 200); a genuine
+      no-match may return empty but only with a *short* cache. — Protocol §6
 
 ## 6. Protocol/ID conformance (`addon-sdk`, `addons`)
 - [ ] A **standalone, versioned** wire spec exists at `addon-sdk/docs/PROTOCOL.md`
@@ -105,12 +118,23 @@ Each item names which repo(s) it applies to and which plan section it comes from
       anything else is a 404, never a handler call with a contradictory type.
       Malformed percent-encoding / bad requests are controlled `4xx`, never an
       escaped `URIError`/500. — Protocol §5/§6 (audit A-005)
+- [ ] **`meta` route type ↔ id identity is validated on input (audit A-006):**
+      `artist`↔artist MBID, `album`↔release MBID, `track`↔recording MBID/ISRC,
+      `playlist`↔playlist id; a contradictory pair is a 404, never a handler call
+      (the input mirror of the meta discriminated response). — Protocol §3/§5
+- [ ] **MusicBrainz access is rate-limited (audit A-006):** addons that call
+      MusicBrainz go through a shared ≤1 req/sec limiter with `503 Retry-After`
+      backoff (the shared `@p2p-songs/musicbrainz` client); co-hosted addons
+      should share one limiter instance. — MusicBrainz API operational contract
 
 ### 6a. SDK credential-boundary safety (`addon-sdk`) — audit A-005
 - [ ] A request whose path carries a config segment is **secret-bearing**: its
-      manifest, `/configure`, and resource responses are `Cache-Control:
-      no-store, private` — **never** `public`/shared caching (the segment holds
-      the debrid key). Unconfigured requests may cache normally. — Checklist §7
+      manifest, `/configure`, and resource responses — **and its `OPTIONS`
+      preflight and `405` method rejection** (audit A-006) — are `Cache-Control:
+      no-store, private`, **never** `public`/shared caching (the segment holds
+      the debrid key). The secret detection runs before any early return, so no
+      method/route shortcut leaks a cacheable secret-bearing response.
+      Unconfigured requests may cache normally. — Checklist §7
 - [ ] **Error bodies are opaque** — a failure returns a stable `err` string
       only, never a handler/provider exception message (which can contain the
       credential). Diagnostics go only to the opt-in `onError` hook. — Checklist §7
@@ -347,3 +371,16 @@ same-title wrong-artist matches pass; complete
 source outages become six-hour cached empty results; MusicBrainz's required
 rate limit is unenforced; and meta route type/ID contradictions are accepted.
 See [`docs/audits/2026-07-19-reference-addons.md`](./audits/2026-07-19-reference-addons.md).
+
+**A-006 reconciled (2026-07-20).** All six addressed: (crit) the SDK now detects
+the secret-bearing path before any method/OPTIONS early-return, so configured
+405/204 are `no-store, private`; (SDK) `meta` route type↔id identity validated
+on input (404 on mismatch); `stream-legal` now (a) requires a **recognized
+per-item CC/public-domain license** (fail closed; §5 above), (b) requires
+**artist agreement** before matching, and (c) distinguishes a **total outage**
+(retryable uncacheable error) from a genuine no-match (short cache); and a new
+shared **`@p2p-songs/musicbrainz`** package puts MB access behind a **≤1 req/sec
+limiter + 503 backoff**, consumed by both addons. New invariants in §5/§6/§6a
+above. **SDK 36 tests; addons 46 tests (musicbrainz 7 + musicmeta 14 +
+stream-legal 25); typecheck + build + built-package adversarial probes green.**
+Re-audit to confirm.

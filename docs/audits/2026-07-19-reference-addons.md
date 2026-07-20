@@ -1,7 +1,7 @@
 # Reference Addons and SDK Re-audit
 
 - **Audit ID:** A-006
-- **Status:** CHANGES REQUIRED — 1 critical, 5 medium
+- **Status:** RECONCILED — all 6 findings addressed 2026-07-20 (see Resolution); re-audit invited to confirm
 - **Supersedes:** A-005 for current implementation sign-off; partially confirms A-005 reconciliation
 - **Audited commits:** `.github` `33db8ae7e22739c060bd1786337b2353191443fe`; `addon-sdk` `ceb1d8b3715811d36b09a051cc4ef4ccc7394f20`; `addons` `afa065fc427d7159d560c8816aa6dd28e1a69b1c`; `player` `af63ee23746ff6d601aa420439bed5540845c6dd`; `backend` `682adc7ed6b5db10d37db9b8a344b65b663e17f9`
 - **Last updated:** 2026-07-19
@@ -113,3 +113,45 @@ contradictions are accepted and publicly cached.
 - Source inspection confirmed all-source rejection collapses to a cacheable empty 200 and both MusicBrainz clients contain no limiter/retry/backoff.
 - No code in `player`, `addon-sdk`, `addons`, or `backend` was modified.
 - No GitHub issues were created; publication awaits explicit user approval.
+
+## Resolution (2026-07-20, implementer)
+
+All six findings addressed; docs synced (PROTOCOL.md §6/§7, Review Checklist
+§5/§6/§6a + status, both `CLAUDE.md`s, plan Phase 3, memory).
+
+- **[CRITICAL] Configured 405 bypassed no-store → FIXED.** `router.ts` computes
+  the secret-bearing path (`hasConfigSegment` → `cachePolicy`) **before** the
+  method/OPTIONS early-returns, and merges `no-store, private` into the 204 and
+  405 responses. New method-matrix tests (`POST/PUT/DELETE`/`OPTIONS` over
+  configured vs unconfigured paths).
+- **[MEDIUM] "Legal Streams" overstated item license → FIXED.** New
+  `stream-legal/src/license.ts` (`isRecognizedOpenLicense`, fail closed). The
+  Internet Archive and Jamendo sources emit a candidate only when the item
+  carries a recognized CC/public-domain value; `rankCandidates` re-checks
+  centrally. Tests: absent/unknown/malformed/all-rights-reserved rejected;
+  CC + public-domain accepted; unlicensed IA item → `[]`. The stream name now
+  shows the license (e.g. `CC BY 3.0`).
+- **[MEDIUM] Wrong-artist same-title matches → FIXED.** `match.ts` requires a
+  minimum artist score (`MIN_ARTIST_SCORE`) when artist metadata exists on both
+  sides; duration is corroboration only. Probe `Correct Artist — Home` vs
+  `Wrong Artist — Home` now drops the wrong artist.
+- **[MEDIUM] Total outage → 6h cached empty → FIXED.** `resolveStreams` returns
+  `{ streams, allSourcesFailed }`; the handler throws on a total outage
+  (uncacheable 500, not heuristically cached) and caches a genuine no-match only
+  briefly (`max-age=300`). Metadata-lookup failures propagate as errors too.
+- **[MEDIUM] MusicBrainz rate limit unenforced → FIXED.** New shared
+  **`@p2p-songs/musicbrainz`** package: a `RateLimiter` (≤1 req/sec, injectable
+  clock) + `503 Retry-After` backoff, wrapping every MB request. Both
+  `musicmeta` and `stream-legal` now consume it (dedup of the former per-addon
+  clients); co-hosted addons can share one limiter instance. Documented caveat:
+  separate processes each hold their own per-IP budget — use an external gateway
+  or MB mirror for true multi-process scale.
+- **[MEDIUM] Meta route type/id contradiction → FIXED.** `router.ts` validates
+  the `meta` route type against the id entity (`metaIdMatchesType`) before
+  invoking the handler; a mismatch is a 404. Permutation tests added.
+
+Verification: **SDK 36 tests; addons 46 tests (musicbrainz 7 + musicmeta 14 +
+stream-legal 25)**; typecheck + build clean; built-package probes replay the
+audit's runtime cases — configured POST → `no-store, private`;
+`/meta/artist/<recordingId>` → 404; unlicensed candidate dropped; wrong-artist
+dropped.

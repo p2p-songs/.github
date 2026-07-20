@@ -6,7 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **CHANGES REQUIRED — 1 critical, 5 medium** | A-005 for current implementation sign-off | 6 pending publication/triage |
+| **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **RECONCILED — all 6 (1 critical, 5 medium) addressed 2026-07-20; re-audit to confirm** | A-005 for current implementation sign-off | None pending re-audit |
 | **A-005** | 2026-07-19 | [Addon SDK implementation](./2026-07-19-addon-sdk-implementation.md) | **RECONCILED — all 5 (2 critical, 3 medium) addressed 2026-07-19; re-audit to confirm** | A-004 for current implementation sign-off | None pending re-audit |
 | **A-004** | 2026-07-19 | [Protocol implementation](./2026-07-19-protocol-implementation.md) | **RECONCILED — all 4 findings (3 medium, 1 low) addressed 2026-07-19; re-audit to confirm** | A-003 for current implementation sign-off | None pending re-audit |
 | **A-003** | 2026-07-17 | [Product-wide plan](./2026-07-17-product-wide-plan.md) | **RESOLVED — the 1 high reconciled 2026-07-18; plan signed off for the declared scope** | A-001 and A-002 for current plan sign-off | None ([addon-sdk#1](https://github.com/p2p-songs/addon-sdk/issues/1) closed) |
@@ -15,15 +15,17 @@ remain as history and may contain findings that were subsequently resolved.
 
 ## Current decision
 
-A-006 audits `stream-legal` + `musicmeta` and rechecks A-005. **Current
-implementation does not pass: 1 critical and 5 medium findings.** Configured
-405 responses bypass the SDK's secret no-store policy; `stream-legal`'s
-item-level “Legal Streams” language exceeds the rights evidence it checks (a
-new product-trust judgment; the literal fixed-catalog invariant passes); wrong-artist
-same-title tracks pass matching; total source outages become six-hour cached
-empty results; MusicBrainz rate limits are unenforced; and meta route type/ID
-contradictions are accepted. A-005's other fixes and A-004 remain confirmed.
-A-003 remains the resolved plan audit.
+A-006 audited `stream-legal` + `musicmeta` and rechecked A-005, finding 1
+critical + 5 medium. **All six are now reconciled (2026-07-20):** the SDK detects
+the secret-bearing path before any method/OPTIONS early-return (configured 405/204
+are now `no-store, private`) and validates `meta` route type↔id identity on input;
+`stream-legal` now requires a recognized per-item CC/public-domain license (fail
+closed), requires artist agreement before matching, and distinguishes a total
+outage (retryable uncacheable error) from a genuine no-match (short cache); and a
+new shared `@p2p-songs/musicbrainz` package rate-limits MusicBrainz to ≤1 req/sec
+with 503 backoff. SDK 36 tests, addons 46 tests, built-package probes green; the
+reconciliation is recorded in the A-006 report's Resolution section. **A re-audit
+is invited to confirm sign-off.** A-003 remains the resolved plan audit.
 
 ## Reading rules
 
