@@ -579,8 +579,24 @@ All logic unit-tested headlessly against injected fakes (a narrow `MediaElementL
 seam + fake ticker + fake session — no jsdom); a throwaway Vite harness covers the
 manual audible smoke with hardcoded direct URLs. 121 player tests; typecheck +
 `vite build` green. The anticipatory crossfade trigger is deferred to a
-position-timing follow-up. Next: **P-4** Dexie persistence + catalog fan-out/merge,
-or **P-5** UI.
+position-timing follow-up.
+
+**Player P-4 persistence + catalog fan-out (ARCHITECTURE §6) — DONE (2026-07-21).**
+Durable state lives in `player/src/core/persistence/` as a **store port +
+adapters**, not a direct Dexie binding: `PlayerRepository` owns the rules (tested
+against `MemoryStore`), `DexieStore` is the thin IndexedDB adapter (proven with
+`fake-indexeddb`, including surviving a reconnect). It covers library, playlists,
+installed addons, settings, and the queue identity, with `updatedAt` on every
+record for the Phase 7 sync adapter. The two load-bearing rules are enforced and
+tested: **persist identity, not resolved media** (saving a queue strips every
+`resolution`; hydration rebuilds items `idle`, asserted down to "the bearer URL
+never reaches the store") and **installed addons are secret-bearing** (own table,
+`configured` flag, `redactManifestUrl()` for any display/log). `AddonCollection.search`
+adds **cross-addon catalog fan-out**, merged and deduped by content id, with each
+provider under a bounded deadline via a shared `askBounded` helper now backing the
+stream resolver, `getMeta`, and `search` alike. 149 player tests; typecheck +
+build green. Wiring the repository to the engine (debounced autosave +
+hydrate-on-boot) lands with the app shell in **P-5**, the next phase.
 
 ### Phase 5 — Player app (UI + PWA)
 **Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless

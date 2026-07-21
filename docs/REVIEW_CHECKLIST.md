@@ -497,3 +497,25 @@ unit-tested in node against injected fakes (`MediaElementLike` + fake ticker +
 fake session — no jsdom); the Vite harness (`harness/`) is a throwaway dev page
 for the manual audible smoke and `vite` is a devDep for it only (no app build
 yet). **121 player tests; typecheck + `vite build` green.**
+
+**Player P-4 persistence + catalog fan-out landed (2026-07-21) — awaiting audit.**
+Durable state (`player/src/core/persistence/`) and cross-addon catalog search.
+What an auditor should check: **persist identity, not resolved media** (§6/§11) —
+`saveQueue` must strip every `QueueItem.resolution` and `loadQueue` must rebuild
+each item `idle`; a resolved/expiring **bearer URL reaching the store at all is a
+defect** (there is a test asserting the raw persisted record contains neither the
+URL nor a `resolution` field, through both the in-memory and real-IndexedDB
+paths). **Installed addons are secret-bearing (§6a):** they live in their own
+table, records carry a `configured` flag, and `redactManifestUrl()` is the only
+sanctioned rendering — a raw configured URL in UI, a log, an export, or an error
+message is a finding. **Persistence is behind a port** (`PersistenceStore`, §9
+decision 2): rules live in `PlayerRepository`, `DexieStore` is a thin adapter, so
+engine code binding directly to Dexie would be drift. **Catalog fan-out**
+(`AddonCollection.search`) merges across addons **deduped by content id** and must
+isolate a down/malformed/**hung** provider — every provider call goes through the
+shared `askBounded` helper (`core/addon/fan-out.ts`), which now also backs the
+stream resolver and `getMeta`; an unbounded `await`/`Promise.all` over providers
+is the A-008 bug class and a regression. Note the repository is **not yet wired to
+the engine** (debounced autosave + hydrate-on-boot is explicitly P-5, with the app
+shell) — its absence is deferral, not drift. **149 player tests; typecheck + build
+green** (Dexie adapter proven against `fake-indexeddb`, including reconnect).
