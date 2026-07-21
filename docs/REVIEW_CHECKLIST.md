@@ -519,3 +519,12 @@ is the A-008 bug class and a regression. Note the repository is **not yet wired 
 the engine** (debounced autosave + hydrate-on-boot is explicitly P-5, with the app
 shell) — its absence is deferral, not drift. **149 player tests; typecheck + build
 green** (Dexie adapter proven against `fake-indexeddb`, including reconnect).
+
+**A-009 player P-4 audit (2026-07-21): changes required — 3 medium.** The
+shared `askBounded` deadline remains pending when a task ignores abort;
+concurrent playlist read-modify-write operations overwrite one another; and
+the phase is marked done without its explicitly promised play-history
+collection/API. Queue identity persistence correctly strips bearer stream URLs,
+configured addon records remain separated/redacted, catalog merge/dedup works,
+and cooperative provider failures are isolated. See
+[`docs/audits/2026-07-21-player-p4.md`](./audits/2026-07-21-player-p4.md).

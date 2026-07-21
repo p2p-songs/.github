@@ -6,6 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
+| **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **CHANGES REQUIRED — 3 medium** | A-008 for current implementation sign-off | 3 medium |
 | **A-008** | 2026-07-21 | [Player P-3 addon client](./2026-07-21-player-p3.md) | **RECONCILED — both (2 medium) addressed 2026-07-21; re-audit to confirm** | A-007 for current implementation sign-off | None pending re-audit |
 | **A-007** | 2026-07-20 | [Player P-1 and A-006 reconciliation](./2026-07-20-player-p1.md) | **RECONCILED — both (1 high, 1 medium) addressed 2026-07-20; re-audit to confirm** | A-006 for current implementation sign-off | None pending re-audit |
 | **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **RECONCILED — all 6 (1 critical, 5 medium) addressed 2026-07-20; re-audit to confirm** | A-005 for current implementation sign-off | None pending re-audit |
@@ -17,18 +18,14 @@ remain as history and may contain findings that were subsequently resolved.
 
 ## Current decision
 
-A-008 audited player P-3 and rechecked A-007, finding 2 medium failure-isolation
-gaps. **Both are now reconciled (2026-07-21):** `AddonCollection.getMeta`
-isolates a down/malformed metadata provider and falls through to the next capable
-addon (aggregate error only when none is reachable); and the stream resolver asks
-each provider under its own bounded, abortable deadline and aggregates over
-never-rejecting results, so one hung addon can no longer wedge a resolution (a
-timeout is classified as unreachable → backoff, distinct from a cancellation).
-New down-first/malformed-first/empty-first/all-down metadata tests and
-hung+healthy/all-hung/skip-during-hang resolver tests; 97 player tests + built-
-output probes reproducing both audit scenarios green. The reconciliation is in
-the A-008 report's Resolution section. **A re-audit is invited to confirm
-sign-off.** A-007 is confirmed; A-003 remains the resolved plan audit.
+A-009 audited player P-4 and rechecked A-008. **Changes are required:** the
+shared provider helper only sends an abort and remains pending if the task does
+not honor it; concurrent playlist read-modify-write operations silently lose an
+edit; and P-4 is marked complete without the explicitly scoped play-history
+store/API. Queue persistence correctly excludes resolved bearer media,
+configured addon records remain separated/redacted, catalog merge/dedup works,
+and ordinary cooperative provider failures are isolated. See the A-009 report
+for the three confirmed medium findings and reproduction record.
 
 ## Reading rules
 
