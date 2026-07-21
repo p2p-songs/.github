@@ -6,6 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
+| **A-008** | 2026-07-21 | [Player P-3 addon client](./2026-07-21-player-p3.md) | **CHANGES REQUIRED — 2 medium** | A-007 for current implementation sign-off | 2 pending publication/triage |
 | **A-007** | 2026-07-20 | [Player P-1 and A-006 reconciliation](./2026-07-20-player-p1.md) | **RECONCILED — both (1 high, 1 medium) addressed 2026-07-20; re-audit to confirm** | A-006 for current implementation sign-off | None pending re-audit |
 | **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **RECONCILED — all 6 (1 critical, 5 medium) addressed 2026-07-20; re-audit to confirm** | A-005 for current implementation sign-off | None pending re-audit |
 | **A-005** | 2026-07-19 | [Addon SDK implementation](./2026-07-19-addon-sdk-implementation.md) | **RECONCILED — all 5 (2 critical, 3 medium) addressed 2026-07-19; re-audit to confirm** | A-004 for current implementation sign-off | None pending re-audit |
@@ -16,16 +17,12 @@ remain as history and may contain findings that were subsequently resolved.
 
 ## Current decision
 
-A-007 audited player P-1 and rechecked A-006, finding 1 high + 1 medium. **Both
-are now reconciled (2026-07-20):** the engine stamp-gates every queue-resolution
-commit (a per-item `resolutionOp` attemptId checked before each write in
-`beginResolve`/`prefetchUpcoming`/`tryStream`), so a superseded resolve poisons
-nothing; and adding the first item to an empty queue now sets a cursor (plus a
-`play()` fallback to `playOrder[0]`). New queue-cache race tests + empty-append
-tests + two gap-closures (expiry reuse, `repeat:"all"` bound); 46 player tests
-and built-output probes green. The reconciliation is in the A-007 report's
-Resolution section. **A re-audit is invited to confirm sign-off.** A-006 is
-confirmed; A-003 remains the resolved plan audit.
+A-008 audits player P-3 and rechecks A-007. **Current implementation does not
+pass: 2 medium findings.** A down first metadata provider prevents fallback to
+a healthy later provider, and one hung stream addon blocks already-successful
+providers indefinitely because fan-out has no deadline/partial completion.
+A-007 reconciliation and the rest of the P-3 security/protocol boundary are
+confirmed. A-003 remains the resolved plan audit.
 
 ## Reading rules
 

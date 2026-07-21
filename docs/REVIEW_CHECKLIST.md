@@ -458,3 +458,12 @@ plane's TanStack Query policy wrapper is intentionally at the app layer (P-5), n
 `src/core` — its *absence there* is correct, not drift (ARCHITECTURE §5a). Addon
 packages are test-only devDeps; no bundled/runtime addon dependency (§1
 neutrality). **88 player tests; typecheck + build + live-HTTP e2e green.**
+
+**A-008 player P-3 audit (2026-07-21): changes required — 2 medium.** Metadata
+fallback stops when the first matching provider throws, so a healthy later
+addon is never queried. Stream fan-out has no per-provider deadline and waits
+on `Promise.allSettled`, so one hung addon blocks a valid stream already returned
+by another. Both failures were reproduced against built output. A-007 is
+confirmed; P-3's remaining protocol validation, secret transport, command-plane,
+backoff, neutrality, and live happy path pass. See
+[`docs/audits/2026-07-21-player-p3.md`](./audits/2026-07-21-player-p3.md).
