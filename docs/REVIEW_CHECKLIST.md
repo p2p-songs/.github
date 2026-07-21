@@ -329,6 +329,18 @@ demonstrated failures, not maximize finding count.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
+**A-011 Bitbop + browser-security audit (2026-07-21): changes required — 1
+critical, 2 medium.** The request-supplied Torznab URL has no outbound-network
+policy, so a publicly reachable Bitbop can be induced to fetch loopback,
+link-local, or private targets (confirmed SSRF). When every debrid probe fails
+transiently, the failures are swallowed and cached as a genuine no-match.
+Finally, the configure page offers AllDebrid and uncached mode even though the
+former has no adapter and the latter cannot resolve a non-downloaded torrent.
+The request-owned credential boundary, no-audio-storage and no-built-in-indexer
+legal rules, file selection, resolved HTTPS output, player CSP/redaction, HTTP
+no-store behavior, and resolved-media persistence rules pass. See
+[`docs/audits/2026-07-21-bitbop-and-browser-security.md`](./audits/2026-07-21-bitbop-and-browser-security.md).
+
 **`bitbop` — the `stream-debrid` addon — implemented (2026-07-21).** The
 plan's centerpiece (§2/§2a/§3) is built, as `@p2p-songs/bitbop`. 66 tests, all
 running against injected fakes (no network, no debrid account). Audit it against

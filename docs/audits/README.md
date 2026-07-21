@@ -6,6 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
+| **A-011** | 2026-07-21 | [Bitbop and browser security](./2026-07-21-bitbop-and-browser-security.md) | **OPEN — changes required** | A-010 for current implementation sign-off | 1 critical, 2 medium |
 | **A-010** | 2026-07-21 | [Player P-5 minimal app](./2026-07-21-player-p5.md) | **RECONCILED — the 1 medium addressed 2026-07-21; re-audit to confirm** | A-009 for current implementation sign-off | None pending re-audit |
 | **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **RECONCILED — all 3 medium addressed 2026-07-21; re-audit to confirm** | A-008 for current implementation sign-off | None pending re-audit |
 | **A-008** | 2026-07-21 | [Player P-3 addon client](./2026-07-21-player-p3.md) | **RECONCILED — both (2 medium) addressed 2026-07-21; re-audit to confirm** | A-007 for current implementation sign-off | None pending re-audit |
@@ -18,6 +19,17 @@ remain as history and may contain findings that were subsequently resolved.
 | A-001 | 2026-07-17 | [Core-player plan](./2026-07-17-core-player-plan.md) | Resolved; historical | — | None |
 
 ## Current decision
+
+A-011 audited the newly landed Bitbop debrid addon and player browser-security
+gate. **Changes are required:** Bitbop fetches a request-supplied Torznab URL
+without an outbound-network policy, enabling SSRF from a publicly reachable
+deployment (1 critical); a total transient debrid outage is misclassified and
+cached as a no-match; and the configure page offers AllDebrid and uncached mode
+even though neither path can currently produce a stream (2 medium). The
+request-owned credential boundary, legal invariants, file-selection rules,
+strict player CSP, configured-URL redaction/no-store behavior, and
+resolved-media persistence rules otherwise pass. See the A-011 report for
+evidence and the six-lens disposition.
 
 A-010 audited the P-5 minimal player application and rechecked the active
 cross-repo invariants, finding 1 medium: debounced queue persistence did not
