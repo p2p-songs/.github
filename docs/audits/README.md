@@ -6,7 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-011** | 2026-07-21 | [Bitbop and browser security](./2026-07-21-bitbop-and-browser-security.md) | **OPEN — changes required** | A-010 for current implementation sign-off | 1 critical, 2 medium |
+| **A-011** | 2026-07-21 | [Bitbop and browser security](./2026-07-21-bitbop-and-browser-security.md) | **RECONCILED — all 3 (1 critical, 2 medium) addressed 2026-07-21; re-audit to confirm** | A-010 for current implementation sign-off | None pending re-audit |
 | **A-010** | 2026-07-21 | [Player P-5 minimal app](./2026-07-21-player-p5.md) | **RECONCILED — the 1 medium addressed 2026-07-21; re-audit to confirm** | A-009 for current implementation sign-off | None pending re-audit |
 | **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **RECONCILED — all 3 medium addressed 2026-07-21; re-audit to confirm** | A-008 for current implementation sign-off | None pending re-audit |
 | **A-008** | 2026-07-21 | [Player P-3 addon client](./2026-07-21-player-p3.md) | **RECONCILED — both (2 medium) addressed 2026-07-21; re-audit to confirm** | A-007 for current implementation sign-off | None pending re-audit |
@@ -21,15 +21,26 @@ remain as history and may contain findings that were subsequently resolved.
 ## Current decision
 
 A-011 audited the newly landed Bitbop debrid addon and player browser-security
-gate. **Changes are required:** Bitbop fetches a request-supplied Torznab URL
-without an outbound-network policy, enabling SSRF from a publicly reachable
-deployment (1 critical); a total transient debrid outage is misclassified and
-cached as a no-match; and the configure page offers AllDebrid and uncached mode
-even though neither path can currently produce a stream (2 medium). The
-request-owned credential boundary, legal invariants, file-selection rules,
-strict player CSP, configured-URL redaction/no-store behavior, and
-resolved-media persistence rules otherwise pass. See the A-011 report for
-evidence and the six-lens disposition.
+gate, finding 1 critical + 2 medium. **All three are now reconciled
+(2026-07-21).** The critical was a real miss: Bitbop fetches a caller-supplied
+Torznab URL server-side and nothing policed the destination. Indexer requests
+now go through a guarded transport that enforces scheme policy, **re-validates
+every redirect hop** (a permitted public URL 302-ing to loopback defeats a
+pre-flight-only check), and **connects to the address it validated** via
+`node:http`'s `lookup` hook, leaving no DNS-rebinding window. Writing the
+regression test surfaced a further hole the original probe would have missed —
+a **literal IP host never triggers DNS**, so the hook never fired and
+`https://169.254.169.254/…` passed; literal hosts (incl. bracketed IPv6 and
+`::ffff:` IPv4-mapped forms) are now checked separately. Public-safe is the
+**default**; self-hosters, whose Jackett is typically on loopback, opt in with
+`BITBOP_ALLOW_PRIVATE_INDEXERS=1`. A total debrid outage is now distinguished
+from a legitimate empty answer and returns a retryable uncacheable error, and
+the two nonfunctional configure options were removed from the **schema** as well
+as the page so an unusable install URL can no longer be produced or parsed.
+Verified by reproducing the auditor's probe against a listener that records
+connections: blocked with zero contact in public mode, reachable in self-host
+mode, no key material in diagnostics. `addons` 168 tests (Bitbop 66 → 122). See
+the A-011 report's Resolution section.
 
 A-010 audited the P-5 minimal player application and rechecked the active
 cross-repo invariants, finding 1 medium: debounced queue persistence did not

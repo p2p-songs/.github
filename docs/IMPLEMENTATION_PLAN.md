@@ -536,7 +536,7 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
 4. `stream-ytmusic` — `ytId`-style official YouTube embed
 5. `lyrics-lrclib` — lyrics resource
 6. **`stream-debrid` — shipped as `bitbop` — DONE (2026-07-21).** One
-   self-contained addon, Torrentio's shape (§2). 66 tests, none requiring
+   self-contained addon, Torrentio's shape (§2). 122 tests, none requiring
    network or a debrid account (indexers, debrid provider, and metadata are all
    injected behind interfaces).
    - **`/configure` page:** debrid provider + API key + the user's Torznab
@@ -548,6 +548,14 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
      endpoints, per-indexer failures isolated, candidates deduped by infohash
      (better-seeded copy wins) and ranked by format preference then seeders.
      **No built-in tracker list** — §3's "the indexer is the user's own."
+   - **Indexer destinations are policed (audit A-011).** The flip side of "the
+     indexer is the user's own" is that the addon fetches a URL an arbitrary
+     caller controls — SSRF on a public instance. Requests go through a guarded
+     transport: https-only, every redirect hop re-validated, and the validated
+     address is the connected one (no DNS-rebinding window), with literal IP
+     hosts checked separately. Public-safe is the default; a self-hosted
+     loopback/LAN indexer is an explicit opt-in
+     (`BITBOP_ALLOW_PRIVATE_INDEXERS=1`).
    - **File selection (§2a — the music-specific step):** deterministic by
      **disc + track position** when album context is present, fuzzy **title**
      match otherwise; returns *nothing* rather than a probably-wrong track.

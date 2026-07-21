@@ -1,7 +1,7 @@
 # Bitbop and browser-security audit
 
 - **Audit ID:** A-011
-- **Status:** OPEN — 1 critical and 2 medium findings
+- **Status:** RECONCILED — all 3 (1 critical, 2 medium) addressed 2026-07-21; re-audit to confirm
 - **Supersedes:** A-010 for current implementation sign-off
 - **Audited commits:** `.github` `c7fe50b45a9a97b36a512930fcfc905c0b929af8`; `player` `c20394199d970b2a4629e91ae113daada9acf64a`; `addon-sdk` `b9a55a7e7ea0a324da92f49ee00df70dd6e0c9c2`; `addons` `ccd15d4205000e9ae43977f8a30c0c8952a4aeaf`; `backend` `682adc7ed6b5db10d37db9b8a344b65b663e17f9`
 - **Last updated:** 2026-07-21
@@ -61,6 +61,74 @@ otherwise hold for the audited state.
 - **System design and operations:** changes required because a total debrid outage is misclassified and cached. Backend remains scaffolding-only and was not credited as implemented.
 - **UI/UX and accessibility:** changes required because the configuration page advertises unavailable functionality. Its credential warning, keyboard-native controls, labels, CSP, and no-echo behavior otherwise pass.
 - **End-to-end user value and delight:** changes required. The Real-Debrid cached happy path composes, but AllDebrid and uncached-mode setup lead to silent dead ends.
+
+## Resolution (implementer, 2026-07-21)
+
+All three findings are accurate and all three are fixed. Bitbop goes from 66 to
+**122 tests**. The critical one was a genuine miss: the addon fetches a
+caller-supplied URL server-side and nothing policed the destination.
+
+- **[CRITICAL] SSRF via the indexer URL → FIXED.** Two new modules:
+  `net/ip-policy.ts` (pure, 40 tests — every deny range asserted individually)
+  and `net/guarded-fetch.ts`, a `fetch`-shaped transport that is now the
+  **default** for indexer requests. It enforces three things, and the finding's
+  suggested fix named all three:
+  1. **Scheme policy** — https only in public mode.
+  2. **Per-hop redirect revalidation** — `fetch` follows redirects by default,
+     so a permitted public URL that 302s to `http://127.0.0.1` would defeat a
+     pre-flight-only check. Redirects are followed manually and the full policy
+     is reapplied to every hop, with a hop cap.
+  3. **The validated address is the connected address** — built on `node:http`'s
+     `lookup` hook, so there is no second resolution and therefore no
+     DNS-rebinding window. All addresses returned for a hostname are checked and
+     a mixed answer refuses the whole hostname (that is how rebinding is staged).
+
+  **A defect the auditor's probe would not have caught, found by writing the
+  regression test:** a **literal IP host never triggers DNS**, so the `lookup`
+  hook never fires and `https://169.254.169.254/…` sailed straight through the
+  first version of the guard. Literal hosts are now validated separately
+  (`assertLiteralHostAllowed`), including bracketed IPv6 and IPv4-mapped forms
+  like `::ffff:127.0.0.1`.
+
+  **Deployment modes, as the finding suggested.** Public-safe is the **default**,
+  so a public deployment is not one forgotten variable away from being an SSRF
+  proxy. A self-hoster — whose Jackett is typically `http://localhost:9117`, and
+  who is the *common* case — opts in with `BITBOP_ALLOW_PRIVATE_INDEXERS=1`. The
+  active policy is logged at startup and stated on the `/configure` page, which
+  now pre-checks the URL client-side so a refused destination is an error at
+  configure time rather than an opaque playback failure.
+
+- **[MEDIUM] Total debrid outage cached as a no-match → FIXED.** The resolver now
+  separates a *legitimate negative answer from a healthy provider* (uncached, no
+  matching file) from a *provider-side failure* (transport, 5xx, rate limit). It
+  counts probes attempted vs. provider failures; when every probed candidate
+  failed for a provider reason, it reports an outage → uncacheable 500. Auth
+  failure still short-circuits. Three new tests pin all three shapes: all-fail →
+  outage, all-legitimately-empty → cacheable no-match, mixed → success.
+
+- **[MEDIUM] Configure UI offered two nonfunctional modes → FIXED, by removal.**
+  AllDebrid is gone from the config **schema** as well as the page, so an install
+  URL naming it can no longer be produced *or* parsed — "do not serialize
+  unsupported values into an apparently valid install URL," applied at the type
+  level. The `cachedOnly` field is deleted outright rather than pinned to `true`:
+  cached-only is not a preference, it is the contract (resolving an uncached
+  torrent means waiting on a download, which a player cannot do mid-queue), and
+  the page now explains that instead of offering a switch that does nothing. A
+  legacy config carrying `cachedOnly: false` still parses — the field is simply
+  ignored — so existing install URLs don't break.
+
+**Verification after the fix** (the auditor's probe, reproduced end to end
+against a real listener that records every connection):
+
+- Public mode, real recording MBID + `http://127.0.0.1:54321/admin` indexer →
+  **HTTP 500, `Cache-Control: no-store, private`**, and the stand-in internal
+  service recorded **zero** connections. Previously it was requested.
+- Diagnostics for that request contained **no key material** — the redacted
+  config shows `apiKey: '[redacted]'` and `url: '[redacted]'`.
+- Self-host mode (`BITBOP_ALLOW_PRIVATE_INDEXERS=1`), same loopback indexer →
+  **HTTP 200** and the local indexer **was** reached. The fix does not break the
+  primary self-hosted use case.
+- `addons` 168/168 tests (Bitbop 66 → 122), typecheck, and build green.
 
 ## Verification
 

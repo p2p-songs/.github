@@ -57,6 +57,32 @@ Each item names which repo(s) it applies to and which plan section it comes from
 - [ ] Public hosting of the *code/service* is fine (Torrentio itself is
       publicly hosted) as long as the two invariants above hold — don't
       flag public deployment by itself as the problem. — Plan §3
+- [ ] **The caller-supplied indexer URL is policed before it is fetched
+      (audit A-011).** "The indexer is the user's own" means the addon fetches a
+      URL an arbitrary caller controls, so a publicly-hosted instance is an SSRF
+      proxy unless the destination is checked. Required, and all four parts are
+      load-bearing:
+      - **Scheme policy** — https only in public mode.
+      - **Every redirect hop is re-validated.** A permitted public URL that
+        302s to `http://127.0.0.1` defeats a pre-flight-only check, and `fetch`
+        follows redirects by default. Manual redirect handling + a hop cap.
+      - **The validated address must be the connected address.** Validating DNS
+        and then letting the HTTP stack resolve again leaves a rebinding window.
+        Bitbop uses `node:http`'s `lookup` hook so there is exactly one
+        resolution; a hostname with any non-public address in its answer is
+        refused wholesale.
+      - **Literal IP hosts are validated separately.** Node skips DNS for a
+        numeric host, so a `lookup`-hook-only guard misses
+        `https://169.254.169.254/…` entirely — including bracketed IPv6 and
+        IPv4-mapped `::ffff:127.0.0.1`. This one bit the first implementation;
+        check it explicitly.
+      **Deployment modes:** public-safe must be the **default** (a public
+      instance must not be one forgotten env var away from being an open proxy);
+      a self-hosted indexer on loopback/LAN is an explicit opt-in
+      (`BITBOP_ALLOW_PRIVATE_INDEXERS=1`). Do **not** flag the existence of the
+      permissive mode as the finding — flag it only if it is the default, or if
+      the active policy isn't stated to the operator and on `/configure`.
+      — audit A-011; `addons/packages/bitbop/src/net/`
 
 ## 4. `stream-ytmusic` (`addons`)
 - [ ] Returns Stremio's native `ytId`-style pointer (official YouTube
@@ -340,6 +366,17 @@ The request-owned credential boundary, no-audio-storage and no-built-in-indexer
 legal rules, file selection, resolved HTTPS output, player CSP/redaction, HTTP
 no-store behavior, and resolved-media persistence rules pass. See
 [`docs/audits/2026-07-21-bitbop-and-browser-security.md`](./audits/2026-07-21-bitbop-and-browser-security.md).
+
+**A-011 (2026-07-21): 1 critical + 2 medium on Bitbop — all reconciled.** The
+critical was **SSRF via the caller-supplied indexer URL** — see the new §3 item,
+which is now the checklist's most detailed entry because the failure mode has
+four distinct parts and a guard can look complete while missing one. Also fixed:
+a total debrid outage was swallowed into a cached no-match (now a retryable
+uncacheable error, distinguished from a healthy provider's legitimately empty
+answer), and the configure page offered AllDebrid + "include uncached" when
+neither could produce a stream (both removed from the **schema**, not just the
+UI, so an unusable install URL can't be produced or parsed). Bitbop 66 → 122
+tests.
 
 **`bitbop` — the `stream-debrid` addon — implemented (2026-07-21).** The
 plan's centerpiece (§2/§2a/§3) is built, as `@p2p-songs/bitbop`. 66 tests, all
