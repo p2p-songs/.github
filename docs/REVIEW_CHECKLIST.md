@@ -543,3 +543,33 @@ collection/API. Queue identity persistence correctly strips bearer stream URLs,
 configured addon records remain separated/redacted, catalog merge/dedup works,
 and cooperative provider failures are isolated. See
 [`docs/audits/2026-07-21-player-p4.md`](./audits/2026-07-21-player-p4.md).
+
+**Player P-5 minimal app slice landed (2026-07-21) — awaiting audit.** A
+React/Vite app (`player/index.html` → `src/app/`, `src/ui/`) over the existing
+engine. What an auditor should check:
+- **Neutrality holds in the UI (§1/§11):** the only way to add a source is
+  pasting a manifest URL in the addon manager. No bundled, seeded, suggested, or
+  default-installed addon anywhere in `src/app`/`src/ui`. (The *search* screen
+  suggests example **queries**, not addons — that is not a bundled source.)
+- **Credential display (§6a):** a stored addon URL must only ever render through
+  `redactManifestUrl`. A raw configured URL in the DOM, a log, or an error
+  message is a finding.
+- **The `core`/`ui` boundary (§8):** `src/core` must not import from `src/ui` or
+  `src/app`. Components must own no playback/queue logic — they read view-models
+  and issue engine commands (§8a).
+- **Plane separation (§5a):** the TanStack Query client is app-layer and wraps
+  metadata reads only. A `/stream` call routed through React Query — inheriting
+  retry/refetch — is a regression.
+- **Snapshot stability:** `Engine.getState()` must stay referentially stable
+  between real changes; returning a fresh object breaks every diffing subscriber
+  (it caused an infinite React render loop). `restoreQueue` must preserve stable
+  ids and force `resolution: idle`.
+- **Honest failure (§4b, end-to-end value):** a track that can't be resolved must
+  say so — `PlaybackAlert` surfaces the resolver's reason and distinguishes "no
+  source has this track" from "no stream addon installed" from "addons
+  unreachable". Silent failure is the defect this replaced.
+- **Not yet built, deliberately** (absence is not drift): router, theme
+  contract/registry (token layer only — §7a says ship one theme first),
+  source-picker modal, Artists/Playlists tabs, PWA/service worker (P-6). Phase
+  5's full exit criteria stay open pending `stream-debrid` and the measured
+  gapless matrix. **172 player tests; typecheck + `vite build` green.**

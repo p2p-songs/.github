@@ -619,6 +619,24 @@ the threshold defined in ARCHITECTURE §4c on the named browser×codec matrix,
 crossfade fallback where a combo can't meet it), and control it from OS media
 keys. (Note: "gapless" is a measured target, not an absolute guarantee.)
 
+**Player P-5 minimal app slice (ARCHITECTURE §7) — DONE (2026-07-21).** A
+React/Vite app over the existing engine: addon manager (install by manifest URL
+only — nothing bundled, and stored URLs render redacted), cross-addon search
+(Songs/Albums), album detail, persistent player bar, queue drawer, home
+(recently played), library, minimal settings. The **TanStack Query** client now
+lives in the app layer, closing the metadata-plane policy deferred in P-3
+(`/stream` still never runs through it), and `usePersistSession` wires the P-4
+repository to the engine (hydrate on boot, debounced autosave, record plays).
+Two engine changes fell out and are the load-bearing ones: `getState()` is now
+**referentially stable** (a fresh object per call made React's snapshot
+subscriber loop forever) and `restoreQueue` preserves a restored session's
+**stable ids** while forcing every item back to `idle`. Verified by hand against
+live `musicmeta` + `stream-legal`: install → search → play real CC audio.
+172 player tests; typecheck + build green. **Not yet:** router, the theme
+contract/registry (token layer only — one theme), source-picker modal, PWA.
+Phase 5's full exit criteria remain open — they need `stream-debrid` (unbuilt)
+and the measured gapless matrix.
+
 ### Phase 5b — Accounts & sync (optional; `backend` repo)
 **Built per ARCHITECTURE.md §6b (its P-7).** Self-hosted Supabase (Postgres +
 GoTrue auth + RLS) in the `backend` repo; a client sync adapter reconciles
