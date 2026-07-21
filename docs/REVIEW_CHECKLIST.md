@@ -478,3 +478,22 @@ by another. Both failures were reproduced against built output. A-007 is
 confirmed; P-3's remaining protocol validation, secret transport, command-plane,
 backoff, neutrality, and live happy path pass. See
 [`docs/audits/2026-07-21-player-p3.md`](./audits/2026-07-21-player-p3.md).
+
+**Player P-2 real audio subsystem landed (2026-07-21) — awaiting audit.** The
+browser audio backend (`player/src/core/audio/`) behind the existing
+`AudioBackend` interface. What an auditor should check: **crossfade uses
+`element.volume`, never a Web Audio graph** (the CORS-taint reason, ARCHITECTURE
+§4c — a `MediaElementAudioSourceNode` on the critical path is a regression);
+**events are token-identity gated** so a late `loaded`/`ended`/`error` from a
+swapped-away element is dropped, not misapplied (§4b — `ended`/`position` only
+from the active element); **dual-element preload→swap** is the gapless mechanism
+and the engine preloads only the *immediate* next item (JIT, one idle element,
+§5.2); a superseding `load`/`stop` must silence the outgoing element (no audio
+bleed); **MediaSession routes OS actions to engine commands and never owns
+playback logic** (§8a); a rejected `play()` (autoplay policy) is not treated as a
+stream failure. The anticipatory crossfade *trigger* is intentionally deferred to
+the position-timing work (§4b/§4c) — its absence is not drift. Audio logic is
+unit-tested in node against injected fakes (`MediaElementLike` + fake ticker +
+fake session — no jsdom); the Vite harness (`harness/`) is a throwaway dev page
+for the manual audible smoke and `vite` is a devDep for it only (no app build
+yet). **121 player tests; typecheck + `vite build` green.**

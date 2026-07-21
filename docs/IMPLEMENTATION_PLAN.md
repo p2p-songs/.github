@@ -568,9 +568,19 @@ boots the real `stream-legal` + `musicmeta` over real HTTP (fixture-injected
 upstreams → deterministic) and drives resolve→buffer→play end to end. 88 player
 tests; typecheck + build + live-HTTP e2e green. The metadata plane's TanStack
 Query *policy* wrapper lives at the app/UI layer (P-5), not `src/core`; the
-`/stream` command plane is engine-owned (§5a). Next: **P-2** real dual-`<audio>`
-backend (browser-only; the fake carried P-1/P-3) or **P-4** Dexie persistence +
-catalog fan-out/merge.
+`/stream` command plane is engine-owned (§5a).
+
+**Player P-2 real audio subsystem (ARCHITECTURE §4c) — DONE (2026-07-21).** The
+browser audio backend (`player/src/core/audio/html-audio.ts`, `media-session.ts`)
+behind the existing `AudioBackend` interface: dual-element preload→swap (gapless),
+token-identity events, `element.volume` crossfade (never Web Audio — CORS), engine
+preload wiring (§5.2), and MediaSession routing OS controls to engine commands.
+All logic unit-tested headlessly against injected fakes (a narrow `MediaElementLike`
+seam + fake ticker + fake session — no jsdom); a throwaway Vite harness covers the
+manual audible smoke with hardcoded direct URLs. 121 player tests; typecheck +
+`vite build` green. The anticipatory crossfade trigger is deferred to a
+position-timing follow-up. Next: **P-4** Dexie persistence + catalog fan-out/merge,
+or **P-5** UI.
 
 ### Phase 5 — Player app (UI + PWA)
 **Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless
