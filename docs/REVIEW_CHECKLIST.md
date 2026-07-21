@@ -459,6 +459,17 @@ plane's TanStack Query policy wrapper is intentionally at the app layer (P-5), n
 packages are test-only devDeps; no bundled/runtime addon dependency (§1
 neutrality). **88 player tests; typecheck + build + live-HTTP e2e green.**
 
+**A-008 reconciled (2026-07-21).** Both medium findings fixed — failure isolation
+at the new external boundary. (1) `AddonCollection.getMeta` isolates a
+down/malformed metadata provider and falls through to the next capable addon
+(aggregate `AddonUnreachableError` only when none is reachable; cancellation
+re-thrown). (2) The stream resolver asks each provider under its own **bounded,
+abortable deadline** and aggregates over never-rejecting results, so one hung
+addon can't wedge the resolve — a timeout is classified unreachable→backoff,
+distinct from a cancellation. New down-first/malformed-first/empty-first/all-down
+metadata tests + hung+healthy/all-hung/skip-during-hang resolver tests. **97
+player tests; typecheck + build + built-output probes green.** Re-audit to confirm.
+
 **A-008 player P-3 audit (2026-07-21): changes required — 2 medium.** Metadata
 fallback stops when the first matching provider throws, so a healthy later
 addon is never queried. Stream fan-out has no per-provider deadline and waits
