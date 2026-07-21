@@ -626,13 +626,17 @@ only — nothing bundled, and stored URLs render redacted), cross-addon search
 (recently played), library, minimal settings. The **TanStack Query** client now
 lives in the app layer, closing the metadata-plane policy deferred in P-3
 (`/stream` still never runs through it), and `usePersistSession` wires the P-4
-repository to the engine (hydrate on boot, debounced autosave, record plays).
+repository to the engine (hydrate on boot, debounced autosave, record plays) —
+with the debounce itself in `SessionAutosave`, which after A-010 reschedules
+only on a *changed queue* (position ticks were resetting it faster than it could
+fire, so nothing persisted during playback) and flushes on
+`visibilitychange`→hidden / `pagehide` / teardown.
 Two engine changes fell out and are the load-bearing ones: `getState()` is now
 **referentially stable** (a fresh object per call made React's snapshot
 subscriber loop forever) and `restoreQueue` preserves a restored session's
 **stable ids** while forcing every item back to `idle`. Verified by hand against
 live `musicmeta` + `stream-legal`: install → search → play real CC audio.
-172 player tests; typecheck + build green. **Not yet:** router, the theme
+180 player tests; typecheck + build green. **Not yet:** router, the theme
 contract/registry (token layer only — one theme), source-picker modal, PWA.
 Phase 5's full exit criteria remain open — they need `stream-debrid` (unbuilt)
 and the measured gapless matrix.

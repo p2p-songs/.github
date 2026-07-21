@@ -286,9 +286,18 @@ demonstrated failures, not maximize finding count.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
-**A-010 player P-5 audit (2026-07-21): changes required — 1 medium.** The
-debounced queue autosave can lose changes made within 800 ms of a close or reload
-because no lifecycle flush exists. After scope clarification, CSP/Trusted Types
+**A-010 player P-5 audit (2026-07-21): 1 medium — now reconciled.** The
+debounced queue autosave could lose changes made within 800 ms of a close or
+reload because no lifecycle flush existed. Investigating it surfaced a larger
+version of the same bug: the debounce rescheduled on *any* engine notification,
+and the engine notifies ~4×/s on position ticks, so the queue was never
+persisted while a track played. **Fixed 2026-07-21** — `SessionAutosave`
+(`player/src/core/persistence/session-autosave.ts`) reschedules only on a
+changed queue snapshot, flushes the pending snapshot on `visibilitychange`
+→hidden / `pagehide` / teardown, and retries a rejected write on the next flush
+without spinning. Auditors: the invariant to check is *"a queue edit is durable
+by the time the page is hidden, at any playback state"* — a debounce that resets
+on playback state is the failure mode. After scope clarification, CSP/Trusted Types
 remains a future implementation gate for credential-bearing addons and mobile
 layout remains deferred polish outside this lite desktop E2E slice; neither is
 a current finding. Protocol/legal neutrality, configured-URL redaction,
