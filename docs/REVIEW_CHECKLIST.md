@@ -286,6 +286,17 @@ demonstrated failures, not maximize finding count.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
+**A-010 player P-5 audit (2026-07-21): changes required — 1 medium.** The
+debounced queue autosave can lose changes made within 800 ms of a close or reload
+because no lifecycle flush exists. After scope clarification, CSP/Trusted Types
+remains a future implementation gate for credential-bearing addons and mobile
+layout remains deferred polish outside this lite desktop E2E slice; neither is
+a current finding. Protocol/legal neutrality, configured-URL redaction,
+resolved-media persistence rules, command/query-plane separation, provider
+isolation, and the prior reconciliation fixes pass. All player, SDK/protocol,
+and addon tests, typechecks, and builds are green. See
+[`docs/audits/2026-07-21-player-p5.md`](./audits/2026-07-21-player-p5.md).
+
 **Implementation started (2026-07-18).** First code landed:
 **`@p2p-songs/protocol`** in the `addon-sdk` repo (`packages/protocol`) — the
 schema-first (zod) wire contract: entity-typed MBIDs, stream object + optional
