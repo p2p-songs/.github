@@ -45,6 +45,14 @@ way, is what Torrentio does — and what we're building.
 
 ## 2. How `stream-debrid` Works: the Torrentio Pattern
 
+> **Naming (2026-07-21).** The debrid stream addon is called **Bitbop**
+> (`@p2p-songs/bitbop`, manifest id `com.p2p-songs.bitbop`, display name
+> "Bitbop"). **`stream-debrid` remains the role name** used throughout this plan
+> and the review checklist — where those docs say `stream-debrid`, the
+> implementation is Bitbop. Same addon; the name is the product, the term is the
+> architecture. **Implemented 2026-07-21** — see the `addons` repo,
+> `packages/bitbop`.
+
 [Torrentio](https://github.com/TheBeastLT/torrentio-scraper) is one
 self-contained Stremio addon, not a layer sitting on top of other addons.
 On a `/stream` request it:
@@ -527,17 +535,37 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
 (audit A-006).
 4. `stream-ytmusic` — `ytId`-style official YouTube embed
 5. `lyrics-lrclib` — lyrics resource
-6. **`stream-debrid`** — one self-contained addon, Torrentio's shape (§2):
-   - `/configure` page: debrid provider + API key, indexer selection
-   - Discovery/aggregation: query the configured indexers for candidates,
-     dedupe and rank the combined results internally
-   - Debrid resolution: cache-check + resolve any `infoHash` candidate to
-     a direct `url`, using the API key from `/configure`
-   - Sort/label final results by cached-status, format, source
+6. **`stream-debrid` — shipped as `bitbop` — DONE (2026-07-21).** One
+   self-contained addon, Torrentio's shape (§2). 66 tests, none requiring
+   network or a debrid account (indexers, debrid provider, and metadata are all
+   injected behind interfaces).
+   - **`/configure` page:** debrid provider + API key + the user's Torznab
+     indexers. Custom page (not the SDK default): strict CSP with a per-render
+     nonce, the key never leaves the browser, the page never echoes key material
+     back into the HTML, and it states plainly that the generated install URL
+     *is* a password.
+   - **Discovery/aggregation:** parallel fan-out to the **user's own** Torznab
+     endpoints, per-indexer failures isolated, candidates deduped by infohash
+     (better-seeded copy wins) and ranked by format preference then seeders.
+     **No built-in tracker list** — §3's "the indexer is the user's own."
+   - **File selection (§2a — the music-specific step):** deterministic by
+     **disc + track position** when album context is present, fuzzy **title**
+     match otherwise; returns *nothing* rather than a probably-wrong track.
+     "Largest file" is never used.
+   - **Debrid resolution:** cache-check → select file → unrestrict, every call
+     using **that request's own** `/configure` key. A non-https unrestricted URL
+     is rejected rather than passed to the player. `configurationRequired: true`
+     makes the SDK router **fail closed** (no handler runs without credentials).
+   - **Outage semantics:** a total indexer failure or a rejected debrid key
+     throws (uncacheable 500); a genuine no-match caches briefly — the same
+     A-006 distinction `stream-legal` uses.
 
 **Exit criteria:** each manifest installs and responds correctly via
 `curl`; `stream-debrid` returns a playable direct URL for a real album
-given a real debrid API key.
+given a real debrid API key. *(Status: the pipeline is implemented and fully
+tested against fakes. The final clause — a real album via a real key — is the
+one thing that needs the operator's own debrid account and indexers, so it
+remains an operator smoke test rather than a CI-verifiable claim.)*
 
 ### Phase 4 — Player core engine (headless)
 **Built per [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)

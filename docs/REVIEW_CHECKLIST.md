@@ -22,6 +22,11 @@ Each item names which repo(s) it applies to and which plan section it comes from
       content-agnostic. — Plan §1, §3
 
 ## 2. `stream-debrid` shape (`addons`)
+> **Naming:** `stream-debrid` is the **role**; the implementation is
+> **`bitbop`** (`addons/packages/bitbop`, `@p2p-songs/bitbop`, manifest id
+> `com.p2p-songs.bitbop`). Every `stream-debrid` item in §2 and §3 is checked
+> against Bitbop. Implemented 2026-07-21.
+
 - [ ] `stream-debrid` is **one self-contained addon**: its own discovery
       logic, its own aggregation/ranking, its own debrid resolution, its
       own `/configure` page. — Plan §2
@@ -169,6 +174,44 @@ Each item names which repo(s) it applies to and which plan section it comes from
       test asserting configured URLs never land in any SW/HTTP cache. Client-
       side encryption without a user-held key is **not** accepted as a fix. —
       ARCHITECTURE §6a
+      **Gate satisfied 2026-07-21, alongside `bitbop`** (this was the hard gate
+      A-010 deferred until a credential-bearing addon existed). What landed, and
+      what to check it against:
+      - `player/src/app/security/csp.ts` builds the policy; a Vite
+        `transformIndexHtml` plugin injects it as a `<meta http-equiv>` so it
+        applies on any static host. **Production**: `script-src 'self'` — no
+        `unsafe-inline`, no `unsafe-eval` — plus `object-src`/`base-uri`/
+        `frame-ancestors`/`form-action` `'none'` and
+        `require-trusted-types-for 'script'`. **Dev** relaxes script-src for Vite
+        HMR only. Verify against `dist/index.html` after `vite build`, not just
+        the source.
+      - Vite's **modulepreload polyfill is disabled** (`build.modulePreload.
+        polyfill: false`) — it emits an inline `<script>` that `script-src 'self'`
+        would otherwise have to accommodate. The built HTML must contain **no**
+        inline script.
+      - **Honest scope, don't flag as a gap:** `connect-src`/`img-src`/
+        `media-src` must permit arbitrary `https:` — addons are user-installed
+        URLs on hosts that can't be enumerated ahead of time. CSP here is the
+        boundary against *injected* code (the actual §6a threat), not against a
+        *trusted* addon's own host. `csp.ts` says so in prose.
+      - `installTrustedTypesFallback()` registers a `'default'` policy that
+        **passes through with a redacted, deduped warning**. This is deliberately
+        a *monitored escape hatch*, not a bypass: the app has no DOM-XSS sinks,
+        so it should never fire, and it exists so an unexpected dependency sink
+        surfaces loudly instead of white-screening. It is documented as
+        to-be-tightened-to-throwing after a real-browser pass. Flag it if it is
+        ever presented as the *primary* protection — `script-src` is.
+      - `ErrorBoundary` renders a generic fallback and logs only
+        `redactSecrets(message)` — never the error object, never React's
+        `errorInfo` (a component stack can embed a configured URL). No telemetry,
+        no "copy error details" affordance, by design.
+      - `redactSecrets()` masks the config segment of any configured manifest URL
+        embedded in **arbitrary text** (messages, stacks), keeping the host so a
+        redacted log still identifies the addon.
+      - The **HTTP-cache half** of the required test exists
+        (`http-cache.test.ts`: addon fetches must pass `cache: "no-store"`). The
+        **service-worker half is not yet applicable** — there is no service
+        worker until P-6 (PWA). It must land with the SW, not before.
 - [ ] **No remote UI code (`player`):** themes/plugins are first-party bundled,
       build-time code only — never fetched/`eval`'d at runtime. Remote theme
       code would run in the origin holding the debrid credential. External/
@@ -285,6 +328,17 @@ demonstrated failures, not maximize finding count.
 [`docs/audits/README.md`](./audits/README.md) registry is authoritative for the
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
+
+**`bitbop` — the `stream-debrid` addon — implemented (2026-07-21).** The
+plan's centerpiece (§2/§2a/§3) is built, as `@p2p-songs/bitbop`. 66 tests, all
+running against injected fakes (no network, no debrid account). Audit it against
+§2 and §3 in full; the highest-value things to attack are (a) whether any code
+path can reach a debrid credential that isn't the requesting user's, (b) whether
+`pickFile` can return the *wrong track* (Plan §2a) rather than nothing, and
+(c) whether any error/diagnostic path can emit key material. Note the addon
+ships **no tracker list** — indexers come from config, deliberately. The
+player-side **CSP/Trusted Types gate (§7) landed with it**; see §7 for exactly
+what to verify and what is honestly out of scope.
 
 **A-010 player P-5 audit (2026-07-21): 1 medium — now reconciled.** The
 debounced queue autosave could lose changes made within 800 ms of a close or
