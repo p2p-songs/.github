@@ -555,10 +555,22 @@ built and fully unit-tested against fakes: queue model (§4a), playback FSM (§4
 resolution+prefetch scheduler (§5/§5a), audio backend interface (§4c), and the
 engine orchestrator (JIT prefetch, ranked fallback → re-resolve → bounded
 skip-ahead circuit-breaker, full stamp-based async-race matrix). 38 tests;
-typecheck + build green. Next: P-3 real addon client (`Resolver` impl:
-metadata query plane + `/stream` command plane) + a live-addon e2e test against
-`musicmeta` + `stream-legal` (the headless exit-criteria run). P-2 real `<audio>`
-is browser-only; the fake backend carries headless P-1/P-3.
+typecheck + build green.
+
+**Player P-3 headless slice (ARCHITECTURE §10) — DONE (2026-07-21).** The real
+addon client (`player/src/core/addon/`) fills the `Resolver` seam the P-1 fake
+occupied: an HTTP+JSON `AddonClient` that validates every response against
+`@p2p-songs/protocol`, an `AddonCollection` (install-by-URL, no bundled addon),
+and an `AddonStreamResolver` that fans `/stream` across stream addons with
+**provider-wide exponential backoff** (distinguishing a down addon from a track
+that isn't there — the P-3 half of "failure is bounded"). A **live-addon e2e**
+boots the real `stream-legal` + `musicmeta` over real HTTP (fixture-injected
+upstreams → deterministic) and drives resolve→buffer→play end to end. 88 player
+tests; typecheck + build + live-HTTP e2e green. The metadata plane's TanStack
+Query *policy* wrapper lives at the app/UI layer (P-5), not `src/core`; the
+`/stream` command plane is engine-owned (§5a). Next: **P-2** real dual-`<audio>`
+backend (browser-only; the fake carried P-1/P-3) or **P-4** Dexie persistence +
+catalog fan-out/merge.
 
 ### Phase 5 — Player app (UI + PWA)
 **Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless

@@ -442,3 +442,19 @@ gap-closures (expiry-freshness reuse, `repeat:"all"` breaker bound). Also
 documented P-1's deliberate deferrals in ARCHITECTURE §4b (provider-wide backoff
 and the ~30 s re-prefetch net → P-3; consecutive-threshold vs sweep-set). **46
 player tests; typecheck + build + built-output probes green.** Re-audit to confirm.
+
+**Player P-3 addon client landed (2026-07-21) — awaiting audit.** The real
+addon client (`player/src/core/addon/`) replaces the P-1 fake `Resolver`. New
+things an auditor should check against this file: the `AddonClient` **validates
+every addon response against the `@p2p-songs/protocol` schema** before it reaches
+the engine (§6/§8 — an addon is untrusted input); the `/stream` path stays a
+**scheduler-owned command plane** (the resolver adds no retry/cache — §5a/§8);
+**provider-wide exponential backoff** now closes the P-1 deferral (§8 "provider
+backoff"), and a *reachable* addon returning no match is not counted as a failure
+(no false backoff); configured-URL transport is **`https`-only except loopback**
+(§6a); the request-URL builder round-trips through the real SDK router in a
+**live-HTTP e2e** (`stream-legal` + `musicmeta`, fixture upstreams). The metadata
+plane's TanStack Query policy wrapper is intentionally at the app layer (P-5), not
+`src/core` — its *absence there* is correct, not drift (ARCHITECTURE §5a). Addon
+packages are test-only devDeps; no bundled/runtime addon dependency (§1
+neutrality). **88 player tests; typecheck + build + live-HTTP e2e green.**
