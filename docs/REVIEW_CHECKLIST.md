@@ -211,12 +211,21 @@ Audit the player against that doc, not against a stremio-core port.
 - [ ] **Async results commit by identity, not just abort:** every resolve/load
       carries `{sessionEpoch, queueItemId, attemptId}` and the reducer drops
       completions whose stamp doesn't match current state. AbortController alone
-      is insufficient. Race tests required (resolve-after-skip,
-      failure-after-success, reorder-during-resolve, double-completion). —
+      is insufficient. **The stamp gate applies to the `QueueItem.resolution`
+      cache too, not only the playback FSM (audit A-007)** — a superseded resolve
+      landing late must commit nothing (no mutation, no notify), else it poisons
+      the memory cache `startItem` reuses with a stale bearer URL. Race tests
+      required, asserting **both** FSM state and `QueueItem.resolution`
+      (resolve-after-skip, failure-after-success, reorder-during-resolve,
+      double-completion, old-success/failure-after-new, current-vs-prefetch). —
       ARCHITECTURE §4b
 - [ ] **Queue identity is by stable ID:** `currentItemId` + `playOrder` (not a
       mutable array index); "up next" reads from `playOrder` so it's correct
       under shuffle. Index-as-identity is a defect. — ARCHITECTURE §4a
+- [ ] **A queue that holds items is playable (audit A-007):** adding the first
+      item to an empty/unselected queue sets a cursor (or `play()` falls back to
+      `playOrder[0]`) — "add to queue then press play" must not silently no-op. —
+      ARCHITECTURE §4a
 - [ ] **Failure is bounded:** skip-ahead runs inside a per-session failure
       sweep with a terminal error state and provider backoff; `repeat: "all"` /
       autoplay must not create an unbounded resolve/fail/skip loop. —
@@ -416,7 +425,20 @@ Re-audit to confirm.
 
 **A-007 player P-1 + A-006 reconciliation audit (2026-07-20): changes required
 — 1 high, 1 medium.** P-1's playback reducer drops stale stamps, but the engine
-commits stale scheduler outcomes into `QueueItem.resolution` before that check;
-an old attempt can overwrite a newer bearer URL. Empty-queue append leaves no
-current item so play is a no-op. A-006 is confirmed. See
+committed stale scheduler outcomes into `QueueItem.resolution` before that check;
+an old attempt could overwrite a newer bearer URL. Empty-queue append left no
+current item so play was a no-op. A-006 is confirmed. See
 [`docs/audits/2026-07-20-player-p1.md`](./audits/2026-07-20-player-p1.md).
+
+**A-007 reconciled (2026-07-20).** Both fixed. (high) The engine now stamp-gates
+**every** queue-resolution commit — a per-item `resolutionOp` records the
+`attemptId` allowed to write that item, checked immediately before each commit in
+`beginResolve`/`prefetchUpcoming`/`tryStream`; a superseded outcome mutates and
+notifies nothing (§8 above; ARCHITECTURE §4b). (medium) `append`/`insertAfter`
+select the first item when the queue has no cursor, and `play()` falls back to
+`playOrder[0]`. Added queue-cache race tests (old-success/failure-after-new,
+current-vs-prefetch), empty append/insert/remove-last→append tests, plus two
+gap-closures (expiry-freshness reuse, `repeat:"all"` breaker bound). Also
+documented P-1's deliberate deferrals in ARCHITECTURE §4b (provider-wide backoff
+and the ~30 s re-prefetch net → P-3; consecutive-threshold vs sweep-set). **46
+player tests; typecheck + build + built-output probes green.** Re-audit to confirm.
