@@ -6,7 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **CHANGES REQUIRED — 3 medium** | A-008 for current implementation sign-off | 3 medium |
+| **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **RECONCILED — all 3 medium addressed 2026-07-21; re-audit to confirm** | A-008 for current implementation sign-off | None pending re-audit |
 | **A-008** | 2026-07-21 | [Player P-3 addon client](./2026-07-21-player-p3.md) | **RECONCILED — both (2 medium) addressed 2026-07-21; re-audit to confirm** | A-007 for current implementation sign-off | None pending re-audit |
 | **A-007** | 2026-07-20 | [Player P-1 and A-006 reconciliation](./2026-07-20-player-p1.md) | **RECONCILED — both (1 high, 1 medium) addressed 2026-07-20; re-audit to confirm** | A-006 for current implementation sign-off | None pending re-audit |
 | **A-006** | 2026-07-19 | [Reference addons and SDK re-audit](./2026-07-19-reference-addons.md) | **RECONCILED — all 6 (1 critical, 5 medium) addressed 2026-07-20; re-audit to confirm** | A-005 for current implementation sign-off | None pending re-audit |
@@ -18,14 +18,20 @@ remain as history and may contain findings that were subsequently resolved.
 
 ## Current decision
 
-A-009 audited player P-4 and rechecked A-008. **Changes are required:** the
-shared provider helper only sends an abort and remains pending if the task does
-not honor it; concurrent playlist read-modify-write operations silently lose an
-edit; and P-4 is marked complete without the explicitly scoped play-history
-store/API. Queue persistence correctly excludes resolved bearer media,
-configured addon records remain separated/redacted, catalog merge/dedup works,
-and ordinary cooperative provider failures are isolated. See the A-009 report
-for the three confirmed medium findings and reproduction record.
+A-009 audited player P-4 and rechecked A-008, finding 3 medium. **All three are
+now reconciled (2026-07-21):** `askBounded`'s deadline is a **hard** bound — it
+races the task against a timer it controls, so a transport that ignores its abort
+signal can no longer wedge a fan-out (the doc comment that overclaimed a
+"per-call deadline" is corrected too); the read-modify-write atomicity primitive
+now lives in the **port** (`PersistenceStore.update`, a Dexie `rw` transaction /
+a synchronous memory section) with all three RMW sites moved onto it, so
+overlapping playlist edits no longer silently discard one another; and the
+explicitly-scoped **play history** is implemented as an identity-only collection
+with a retention cap, with the Dexie schema declared cumulatively (v1→v2) so
+existing databases upgrade. 166 player tests and built-output probes green — each
+probe reproducing the auditor's own. The reconciliation is in the A-009 report's
+Resolution section. **A re-audit is invited to confirm.** A-008's isolation work
+is confirmed and now genuinely bounded; A-003 remains the resolved plan audit.
 
 ## Reading rules
 

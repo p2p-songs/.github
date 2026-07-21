@@ -586,17 +586,26 @@ Durable state lives in `player/src/core/persistence/` as a **store port +
 adapters**, not a direct Dexie binding: `PlayerRepository` owns the rules (tested
 against `MemoryStore`), `DexieStore` is the thin IndexedDB adapter (proven with
 `fake-indexeddb`, including surviving a reconnect). It covers library, playlists,
-installed addons, settings, and the queue identity, with `updatedAt` on every
-record for the Phase 7 sync adapter. The two load-bearing rules are enforced and
+installed addons, settings, **play history**, and the queue identity, with
+`updatedAt` on every record for the Phase 7 sync adapter. Read-modify-write
+atomicity is a **port primitive** (`PersistenceStore.update` — a Dexie `rw`
+transaction), so overlapping playlist edits can't silently discard one another;
+play history is identity-only and retention-capped. The two load-bearing rules are enforced and
 tested: **persist identity, not resolved media** (saving a queue strips every
 `resolution`; hydration rebuilds items `idle`, asserted down to "the bearer URL
 never reaches the store") and **installed addons are secret-bearing** (own table,
 `configured` flag, `redactManifestUrl()` for any display/log). `AddonCollection.search`
 adds **cross-addon catalog fan-out**, merged and deduped by content id, with each
 provider under a bounded deadline via a shared `askBounded` helper now backing the
-stream resolver, `getMeta`, and `search` alike. 149 player tests; typecheck +
-build green. Wiring the repository to the engine (debounced autosave +
-hydrate-on-boot) lands with the app shell in **P-5**, the next phase.
+stream resolver, `getMeta`, and `search` alike — with a **hard** deadline (it
+races the task against its own timer, so a transport ignoring its abort signal
+can't wedge a fan-out). **A-009 reconciled (2026-07-21)** — 3 medium: the
+cooperative-vs-hard deadline, read-modify-write atomicity moved into the port,
+and play history (an explicit P-4 deliverable that had been shipped around) now
+implemented with a cumulative Dexie v1→v2 schema so existing databases upgrade.
+166 player tests; typecheck + build + built-output probes green. Wiring the
+repository to the engine (debounced autosave + hydrate-on-boot) lands with the
+app shell in **P-5**, the next phase.
 
 ### Phase 5 — Player app (UI + PWA)
 **Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless

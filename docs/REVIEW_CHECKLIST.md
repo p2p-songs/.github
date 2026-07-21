@@ -517,8 +517,23 @@ shared `askBounded` helper (`core/addon/fan-out.ts`), which now also backs the
 stream resolver and `getMeta`; an unbounded `await`/`Promise.all` over providers
 is the A-008 bug class and a regression. Note the repository is **not yet wired to
 the engine** (debounced autosave + hydrate-on-boot is explicitly P-5, with the app
-shell) — its absence is deferral, not drift. **149 player tests; typecheck + build
-green** (Dexie adapter proven against `fake-indexeddb`, including reconnect).
+shell) — its absence is deferral, not drift.
+
+**A-009 reconciled (2026-07-21).** All 3 medium fixed; the invariants they add:
+(1) **A provider deadline must be a hard bound, not a cooperative abort** —
+`askBounded` races the task against a timer it owns, so a transport that ignores
+its `AbortSignal` still can't wedge a fan-out; merely aborting a child signal and
+awaiting the task is the regression to flag, and abandoned tasks must stay
+rejection-safe. (2) **Read-modify-write atomicity belongs to the port** —
+`PersistenceStore.update` (Dexie `rw` transaction / synchronous memory section)
+is the only sanctioned way to mutate a record; a caller composing `get`+`put` is
+a defect, because two overlapping playlist edits then silently discard one.
+(3) **Play history exists** as an identity-only, retention-capped collection
+(`PlayEvent { id, track, playedAt }` — a `TrackRef`, never a resolved stream);
+the Dexie schema is declared cumulatively (v1's five tables, v2 adding `history`)
+so an existing database upgrades rather than breaking. **166 player tests;
+typecheck + build + built-output probes green** (Dexie adapter proven against
+`fake-indexeddb`, including reconnect and a real v1→v2 upgrade).
 
 **A-009 player P-4 audit (2026-07-21): changes required — 3 medium.** The
 shared `askBounded` deadline remains pending when a task ignores abort;
