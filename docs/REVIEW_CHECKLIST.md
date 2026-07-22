@@ -390,6 +390,15 @@ demonstrated failures, not maximize finding count.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
+**A-012 product implementation re-audit (2026-07-22): changes required — 1
+critical.** The A-011 SSRF reconciliation is incomplete: IPv4-mapped IPv6
+literals are rejected only in dotted-decimal form. Equivalent hexadecimal
+forms such as `::ffff:7f00:1` (loopback) and `::ffff:a9fe:a9fe` (link-local)
+are classified as public and handed directly to the socket. The remaining
+implemented protocol, legal, player-security, persistence, async-race,
+debrid-account-mutation, and present-scope user-journey checks pass. See
+[`docs/audits/2026-07-22-product-reaudit.md`](./audits/2026-07-22-product-reaudit.md).
+
 **A-011 Bitbop + browser-security audit (2026-07-21): changes required — 1
 critical, 2 medium.** The request-supplied Torznab URL has no outbound-network
 policy, so a publicly reachable Bitbop can be induced to fetch loopback,
