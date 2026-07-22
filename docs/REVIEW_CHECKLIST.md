@@ -83,6 +83,32 @@ Each item names which repo(s) it applies to and which plan section it comes from
       permissive mode as the finding — flag it only if it is the default, or if
       the active policy isn't stated to the operator and on `/configure`.
       — audit A-011; `addons/packages/bitbop/src/net/`
+- [ ] **A cache check never leaves work running on the user's account.**
+      Real-Debrid withdrew `/torrents/instantAvailability`, and the state machine
+      that replaced it only reveals cachedness *after* file selection — which is
+      also what starts a download. So "is this cached?" is unavoidably a write,
+      and the invariant is about cleaning up after it:
+      - Anything the addon **adds** in order to check must be **deleted** before
+        it returns, unless it turned out cached. A torrent the *user* already
+        had is never deleted — only the addon's own leavings.
+      - Selection is **audio files only**, never `files=all`; a miss must not
+        cost the user an entire album's download.
+      - The provider-side torrent id is **threaded from check to resolve**, so a
+        single resolution never adds the same torrent twice.
+      - A **non-mutating** bulk pre-check (`GET /torrents`) runs first, so the
+        second and later tracks of an album — the common case — add nothing.
+      - Probing that requires an add is **rationed separately** from free probes.
+        RD allows 250 req/min and the player prefetches; unbounded fan-out is a
+        self-inflicted rate limit.
+      This is the "cached-only" contract in Plan §2 actually being honoured: an
+      addon that *starts* the downloads it promises never to wait for has broken
+      it. — `addons/packages/bitbop/src/debrid/realdebrid.ts`
+- [ ] **Provider errors returned in a 200 body are parsed.** Real-Debrid reports
+      application failures as `{error, error_code}` with an HTTP 200. Unchecked,
+      an auth failure or rate limit surfaces later as an unrelated structural
+      complaint, and the resolver's outage/no-match distinction silently
+      misclassifies it. Auth codes (RD 8–15) must map to the same
+      "credential rejected" path as HTTP 401/403.
 
 ## 4. `stream-ytmusic` (`addons`)
 - [ ] Returns Stremio's native `ytId`-style pointer (official YouTube
@@ -377,6 +403,19 @@ answer), and the configure page offered AllDebrid + "include uncached" when
 neither could produce a stream (both removed from the **schema**, not just the
 UI, so an unusable install URL can't be produced or parsed). Bitbop 66 → 122
 tests.
+
+**Debrid account-mutation fix (2026-07-21, not audit-driven).** Reading the
+current Real-Debrid API against MediaFusion, Comet, and StremThru surfaced a
+defect no fake-based test could have: because `/torrents/instantAvailability`
+is gone, `checkCache` was implementing "is this cached?" as
+`addMagnet → selectFiles("all") → info` and never cleaning up — so a single
+stream request could add **twelve** torrents to the user's account, and
+selecting `all` on an uncached one **started downloading an entire album** the
+addon had already promised never to wait for. Neither reference implementation
+adds anything to check. Fixed per the new §3 item (delete-what-we-added,
+audio-only selection, handle threaded check→resolve, non-mutating `GET /torrents`
+pre-pass, rationed add-probes) along with RD's in-band `error_code` envelope,
+which was being ignored entirely. Bitbop 122 → 140 tests.
 
 **`bitbop` — the `stream-debrid` addon — implemented (2026-07-21).** The
 plan's centerpiece (§2/§2a/§3) is built, as `@p2p-songs/bitbop`. 66 tests, all

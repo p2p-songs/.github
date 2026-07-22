@@ -536,7 +536,7 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
 4. `stream-ytmusic` — `ytId`-style official YouTube embed
 5. `lyrics-lrclib` — lyrics resource
 6. **`stream-debrid` — shipped as `bitbop` — DONE (2026-07-21).** One
-   self-contained addon, Torrentio's shape (§2). 122 tests, none requiring
+   self-contained addon, Torrentio's shape (§2). 140 tests, none requiring
    network or a debrid account (indexers, debrid provider, and metadata are all
    injected behind interfaces).
    - **`/configure` page:** debrid provider + API key + the user's Torznab
@@ -564,6 +564,23 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
      using **that request's own** `/configure` key. A non-https unrestricted URL
      is rejected rather than passed to the player. `configurationRequired: true`
      makes the SDK router **fail closed** (no handler runs without credentials).
+   - **Checking the cache is a write, and is cleaned up after.** Real-Debrid
+     withdrew `/torrents/instantAvailability`; what replaced it only reports
+     `downloaded` *after* file selection, and selection is also what starts a
+     download. There is therefore no read-only way to ask "is this cached?" —
+     confirmed against the current API docs and against how MediaFusion, Comet,
+     and StremThru each solved it (all three avoid asking the provider at all,
+     via an account listing or a shared availability database). Bitbop keeps the
+     question local and makes the write safe: a **non-mutating `GET /torrents`
+     pre-pass** answers candidates the account already holds (for an album, every
+     track after the first), anything added to check is **deleted unless it is
+     cached**, selection is **audio-only** so a miss never costs a whole album,
+     the torrent id is **threaded from check into resolve** so nothing is added
+     twice, and add-requiring probes are **rationed** separately against RD's
+     250 req/min. Bitbop deliberately does *not* adopt the ecosystem's shared
+     cache network (StremThru's Buddy/Peer): publishing which hashes are cached
+     is a coordinated availability index, which §3 rules out. The cost is honest
+     — the first query for an unknown torrent is always a real round-trip.
    - **Outage semantics:** a total indexer failure or a rejected debrid key
      throws (uncacheable 500); a genuine no-match caches briefly — the same
      A-006 distinction `stream-legal` uses.
