@@ -6,7 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-012** | 2026-07-22 | [Product implementation re-audit](./2026-07-22-product-reaudit.md) | **OPEN — changes required (1 critical)** | A-011 for current implementation sign-off | Hexadecimal IPv4-mapped IPv6 literals bypass Bitbop's SSRF policy |
+| **A-012** | 2026-07-22 | [Product implementation re-audit](./2026-07-22-product-reaudit.md) | **RECONCILED — the 1 critical addressed 2026-07-22; re-audit to confirm** | A-011 for current implementation sign-off | None pending re-audit |
 | **A-011** | 2026-07-21 | [Bitbop and browser security](./2026-07-21-bitbop-and-browser-security.md) | **RECONCILED — all 3 (1 critical, 2 medium) addressed 2026-07-21; re-audit to confirm** | A-010 for current implementation sign-off | None pending re-audit |
 | **A-010** | 2026-07-21 | [Player P-5 minimal app](./2026-07-21-player-p5.md) | **RECONCILED — the 1 medium addressed 2026-07-21; re-audit to confirm** | A-009 for current implementation sign-off | None pending re-audit |
 | **A-009** | 2026-07-21 | [Player P-4 persistence and catalog fan-out](./2026-07-21-player-p4.md) | **RECONCILED — all 3 medium addressed 2026-07-21; re-audit to confirm** | A-008 for current implementation sign-off | None pending re-audit |
@@ -25,10 +25,15 @@ A-012 re-audited the implemented product and the A-011 reconciliation. It
 found **1 critical**: Bitbop's IPv6 policy recognizes IPv4-mapped addresses only
 when the embedded IPv4 is dotted decimal. Hexadecimal forms such as
 `::ffff:7f00:1` (IPv4 loopback) and `::ffff:a9fe:a9fe` (link-local/cloud
-metadata) fall through as public and are passed directly to the socket, so the
-public-safe mode remains an SSRF proxy for HTTPS-speaking internal targets.
-Current sign-off is **changes required**. See the A-012 report for the direct
-probe and six-lens disposition.
+metadata) fell through as public and were passed directly to the socket, so
+public-safe mode was still an SSRF proxy for HTTPS-speaking internal targets.
+**Reconciled 2026-07-22:** the policy now parses IPv6 into eight words and
+judges any embedded IPv4 numerically, so every spelling of one address gets one
+answer. The deeper lesson is recorded in the checklist — `new URL()` rewrites
+`[::ffff:127.0.0.1]` to `[::ffff:7f00:1]`, so the dotted form the old regex
+caught, and that A-011's test asserted, was the one spelling that could never
+reach the check: a passing test that defended nothing. See the A-012 report for
+the direct probe and six-lens disposition.
 
 A-011 audited the newly landed Bitbop debrid addon and player browser-security
 gate, finding 1 critical + 2 medium. **All three are now reconciled

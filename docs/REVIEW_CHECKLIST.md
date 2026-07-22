@@ -76,6 +76,14 @@ Each item names which repo(s) it applies to and which plan section it comes from
         `https://169.254.169.254/…` entirely — including bracketed IPv6 and
         IPv4-mapped `::ffff:127.0.0.1`. This one bit the first implementation;
         check it explicitly.
+      - **Addresses are classified by their bits, not their text (audit
+        A-012).** One address has many spellings and the attacker chooses;
+        `::ffff:7f00:1`, `0:0:0:0:0:ffff:7f00:1` and `::ffff:127.0.0.1` are the
+        same loopback. Prefix/regex matching on the string is the bug — and note
+        `new URL()` rewrites the dotted form to hex, so a check that only
+        recognizes `::ffff:127.0.0.1` matches the one spelling that can never
+        arrive. Require a numeric IPv6 parse that judges mapped/compatible/
+        translated embedded v4 in every notation, with tests for the hex forms.
       **Deployment modes:** public-safe must be the **default** (a public
       instance must not be one forgotten env var away from being an open proxy);
       a self-hosted indexer on loopback/LAN is an explicit opt-in
