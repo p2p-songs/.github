@@ -295,30 +295,20 @@ Each item names which repo(s) it applies to and which plan section it comes from
       here**: attribute selectors plus `background-image` exfiltrate field
       contents, and restyling can hide the redaction §6a depends on.
       — ARCHITECTURE §6a, §7a
-- [ ] **A theme is data, never code (`player`).** Distributable themes are *not*
-      a non-goal — installing one is intended (§7b) — but the invariant above is
-      what makes it safe, so check the shape rather than the feature:
-      - A theme is a flat record of token name → value. No CSS, no JS, no
-        selectors. Reject anything that lets a theme express a *rule*.
-      - Tokens are applied with `setProperty` **per token**, never by building
-        a stylesheet string: `setProperty` parses against the property grammar
-        and drops malformed values, so a value carrying `}` cannot escape its
-        declaration. This is the second gate behind schema validation.
-      - Application iterates the **contract**, not the theme's own keys, so an
-        unknown key can never reach the document.
-      - Assets, when they land: fonts via `new FontFace(name, buffer)` (no CSS
-        string built from theme input); SVG icons allowlist-parsed and rebuilt
-        as DOM nodes, never `innerHTML`; textures as size-capped `data:` URIs
-        only — an `https:` asset URL would leak the user's IP to the theme's
-        author on every launch.
-      - The default theme stays reachable, so a bad theme is recoverable.
-      — ARCHITECTURE §7a/§7b
-
-## 8. Core engine (`player`)
-The player architecture is specified in detail in
-[`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md),
-which **deliberately supersedes** the master plan's "Elm-style core" idea.
-Audit the player against that doc, not against a stremio-core port.
+- [ ] **One shipped look; no runtime theming (`player`).** The design is not
+      selectable, installable or switchable — so there is no untrusted-theme
+      surface to review. Check instead that:
+      - No mechanism fetches, evals or applies styling from outside the bundle.
+      - UI components come from the RetroUI shadcn registry as **copied source**
+        under `src/components/ui/` — reviewable in-tree, not opaque runtime code.
+      - **Screens carry no visual utility classes.** Borders, shadows, colours
+        and type live in `src/ui/globals.css`, `src/components/ui/*`, or
+        `src/ui/components/primitives.tsx`. Utilities spread across screens is
+        drift, and no test catches it.
+      - Google Fonts is a deliberate, scoped CSP exception: two pinned origins
+        (`fonts.googleapis.com`, `fonts.gstatic.com`) serving only `@font-face`
+        and font binaries. Flag any *other* external style/font origin.
+      — ARCHITECTURE §7a
 - [ ] The core engine (`src/core`) imports nothing from `src/ui` — the
       headless/UI-agnostic boundary is real and lint-enforced. Engine logic
       (queue, playback machine, scheduler) must be unit-testable without a

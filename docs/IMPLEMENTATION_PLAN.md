@@ -453,7 +453,7 @@ p2p-songs/.github         # org profile + cross-repo docs (this plan lives here)
 p2p-songs/player          # web-only player — single Vite app (see its docs/ARCHITECTURE.md)
   src/
     core/                 #   headless engine: queue · playback FSM · scheduler · addon client · audio · persistence
-    ui/                   #   React UI: themeable (viewmodels + theme contract + themes)
+    ui/                   #   React UI: headless viewmodels + one shipped look (RetroUI/Tailwind)
     app/                  #   Vite entry, router, providers
   docs/ARCHITECTURE.md    #   AUTHORITATIVE for the player (supersedes player details in this plan)
 
@@ -714,8 +714,8 @@ repository to the engine (debounced autosave + hydrate-on-boot) lands with the
 app shell in **P-5**, the next phase.
 
 ### Phase 5 — Player app (UI + PWA)
-**Built per ARCHITECTURE.md §10 (its P-5…P-6).** Themeable UI (headless
-viewmodels + theme contract + one reference theme), addon manager (install by
+**Built per ARCHITECTURE.md §10 (its P-5…P-6).** UI (headless
+viewmodels + one shipped look, no theming), addon manager (install by
 manifest URL), search/browse, now-playing, queue; dual-`<audio>` playback with
 crossfade + `MediaSession`; YouTube IFrame for `stream-ytmusic`; PWA.
 
@@ -742,14 +742,12 @@ Two engine changes fell out and are the load-bearing ones: `getState()` is now
 subscriber loop forever) and `restoreQueue` preserves a restored session's
 **stable ids** while forcing every item back to `idle`. Verified by hand against
 live `musicmeta` + `stream-legal`: install → search → play real CC audio.
-180 player tests; typecheck + build green. **Not yet:** router, source-picker
-modal, PWA. The **theme contract landed 2026-07-22** — a token contract of ~50
-custom properties, three bundled themes (espresso/bauhaus/cyberpunk) and a
-picker; themes are validated *data*, never code, which is what makes installing
-one (ARCHITECTURE §7b) safe. Structural/component theming was dropped: six full
-theme designs shared one information architecture.
-Phase 5's full exit criteria remain open — they need `stream-debrid` (unbuilt)
-and the measured gapless matrix.
+202 player tests; typecheck + build green. **Not yet:** router, source-picker
+modal, PWA, responsive layout. **The UI moved to RetroUI on 2026-07-22** — a
+neobrutalist shadcn registry (copied source over Radix, Tailwind v4), replacing
+a hand-built token/theme system. **Theming was removed entirely:** one design
+ships, not selectable or installable. The reasoning is recorded in ARCHITECTURE
+§7a — the styling layer was never the gap; the component layer was.
 
 ### Phase 5b — Accounts & sync (optional; `backend` repo)
 **Built per ARCHITECTURE.md §6b (its P-7).** Self-hosted Supabase (Postgres +
