@@ -803,6 +803,11 @@ engine. What an auditor should check:
   worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
   and the measured gapless matrix. **206 player tests; typecheck + `vite build`
   green.**
+- **A row must say what clicking it does (§7a):** lists mix kinds, and a song
+  plays while an album/artist opens a screen. Play badge on the artwork ⇒ plays;
+  chevron ⇒ navigates; artists circular. A trailing `▶` vs `›` is not a
+  distinction anyone reads. Destructive row controls reveal on hover/focus and
+  are labelled with the verb for the kind, not a generic "Remove".
 - **Chrome is a second surface (§7a):** registry components assume the cream
   canvas — RetroUI's `outline` button sets `bg-background` with no text colour,
   so on `bg-chrome` it renders cream on cream. Silent: it typechecks, builds and
