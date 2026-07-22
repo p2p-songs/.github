@@ -801,5 +801,12 @@ engine. What an auditor should check:
   kind (**removed** 2026-07-22 — one shipped look on RetroUI, §7a),
   source-picker modal, Playlists tab, responsive/mobile layout, PWA/service
   worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
-  and the measured gapless matrix. **202 player tests; typecheck + `vite build`
+  and the measured gapless matrix. **206 player tests; typecheck + `vite build`
   green.**
+- **Design-system state variants must resolve (§7a):** the registry's components
+  use shorthand (`data-active:`, `data-horizontal:`) and Radix emits
+  `data-state=` / `data-orientation=`; `globals.css` must declare the bridging
+  `@custom-variant`s. Missing ones compile to selectors that match nothing with
+  no error, so `design-system.test.ts` is the check — and it needs `css: true`
+  in `vitest.config.ts` or its `?raw` read is stubbed empty and it passes
+  vacuously.
