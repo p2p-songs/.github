@@ -792,9 +792,14 @@ engine. What an auditor should check:
   say so — `PlaybackAlert` surfaces the resolver's reason and distinguishes "no
   source has this track" from "no stream addon installed" from "addons
   unreachable". Silent failure is the defect this replaced.
-- **Not yet built, deliberately** (absence is not drift): router, installable
-  themes (§7b — the token contract and three bundled themes landed 2026-07-22;
-  install/validate/store did not), source-picker modal, Playlists tab,
-  PWA/service worker (P-6). Phase 5's full exit criteria stay open pending
-  `stream-debrid` and the measured gapless matrix. **207 player tests;
-  typecheck + `vite build` green.**
+- **Library holds identity, not media (§6):** a saved album/artist is an id plus
+  what a row needs to draw — never a track listing, never a stream. Opening one
+  re-reads the catalog. One save path serves all three kinds; the screen tabs
+  All/Songs/Albums/Artists over a single save-time-ordered collection.
+- **Not yet built, deliberately** (absence is not drift): router (nav is a
+  `detail` stack in the UI store; browser Back exits the app), themes of any
+  kind (**removed** 2026-07-22 — one shipped look on RetroUI, §7a),
+  source-picker modal, Playlists tab, responsive/mobile layout, PWA/service
+  worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
+  and the measured gapless matrix. **202 player tests; typecheck + `vite build`
+  green.**
