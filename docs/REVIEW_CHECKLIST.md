@@ -84,6 +84,14 @@ Each item names which repo(s) it applies to and which plan section it comes from
         recognizes `::ffff:127.0.0.1` matches the one spelling that can never
         arrive. Require a numeric IPv6 parse that judges mapped/compatible/
         translated embedded v4 in every notation, with tests for the hex forms.
+      **The policy is about _who chose the destination_, not about whether the
+      destination is private.** A caller-supplied URL fetched server-side is a
+      confused deputy and must be policed; an **operator-supplied** upstream
+      (the operator's own Prowlarr on their own internal network) is an ordinary
+      configured dependency and a private address there is correct. If an
+      operator-configured indexer mode exists, check that a caller-supplied URL
+      is **refused** rather than merged or overridden when one is set, and that
+      the bypass covers only the operator's URL. See `docs/DEPLOYMENT.md`.
       **Deployment modes:** public-safe must be the **default** (a public
       instance must not be one forgotten env var away from being an open proxy);
       a self-hosted indexer on loopback/LAN is an explicit opt-in

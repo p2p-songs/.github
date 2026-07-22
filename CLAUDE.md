@@ -17,6 +17,10 @@ Start here regardless of which repo you're actually working in:
 - [`docs/REVIEW_CHECKLIST.md`](./docs/REVIEW_CHECKLIST.md) — mechanically
   checkable invariants for adversarial/code review, cross-referenced to
   the plan. Source of truth for *what to check*.
+- [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — how player, Bitbop and the
+  indexer may be arranged once the player is publicly hosted; the two config
+  shapes (user-supplied vs operator-supplied indexer), which combinations are
+  safe, and the browser constraints a public origin introduces.
 - [`docs/ADVERSARIAL_REVIEW_CONTRACT.md`](./docs/ADVERSARIAL_REVIEW_CONTRACT.md) —
   the operating agreement between the implementer and an on-demand
   auditor: scope, ground rules, finding format, and how findings get
