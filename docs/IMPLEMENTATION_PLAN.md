@@ -742,8 +742,12 @@ Two engine changes fell out and are the load-bearing ones: `getState()` is now
 subscriber loop forever) and `restoreQueue` preserves a restored session's
 **stable ids** while forcing every item back to `idle`. Verified by hand against
 live `musicmeta` + `stream-legal`: install → search → play real CC audio.
-180 player tests; typecheck + build green. **Not yet:** router, the theme
-contract/registry (token layer only — one theme), source-picker modal, PWA.
+180 player tests; typecheck + build green. **Not yet:** router, source-picker
+modal, PWA. The **theme contract landed 2026-07-22** — a token contract of ~50
+custom properties, three bundled themes (espresso/bauhaus/cyberpunk) and a
+picker; themes are validated *data*, never code, which is what makes installing
+one (ARCHITECTURE §7b) safe. Structural/component theming was dropped: six full
+theme designs shared one information architecture.
 Phase 5's full exit criteria remain open — they need `stream-debrid` (unbuilt)
 and the measured gapless matrix.
 

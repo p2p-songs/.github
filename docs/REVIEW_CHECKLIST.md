@@ -289,10 +289,30 @@ Each item names which repo(s) it applies to and which plan section it comes from
         (`http-cache.test.ts`: addon fetches must pass `cache: "no-store"`). The
         **service-worker half is not yet applicable** — there is no service
         worker until P-6 (PWA). It must land with the SW, not before.
-- [ ] **No remote UI code (`player`):** themes/plugins are first-party bundled,
-      build-time code only — never fetched/`eval`'d at runtime. Remote theme
-      code would run in the origin holding the debrid credential. External/
-      distributable themes are a v1 non-goal. — ARCHITECTURE §6a, §7a
+- [ ] **No remote UI code (`player`):** UI code is first-party, bundled,
+      build-time only — never fetched or `eval`'d at runtime, because it would
+      run in the origin holding the debrid credential. **CSS counts as code
+      here**: attribute selectors plus `background-image` exfiltrate field
+      contents, and restyling can hide the redaction §6a depends on.
+      — ARCHITECTURE §6a, §7a
+- [ ] **A theme is data, never code (`player`).** Distributable themes are *not*
+      a non-goal — installing one is intended (§7b) — but the invariant above is
+      what makes it safe, so check the shape rather than the feature:
+      - A theme is a flat record of token name → value. No CSS, no JS, no
+        selectors. Reject anything that lets a theme express a *rule*.
+      - Tokens are applied with `setProperty` **per token**, never by building
+        a stylesheet string: `setProperty` parses against the property grammar
+        and drops malformed values, so a value carrying `}` cannot escape its
+        declaration. This is the second gate behind schema validation.
+      - Application iterates the **contract**, not the theme's own keys, so an
+        unknown key can never reach the document.
+      - Assets, when they land: fonts via `new FontFace(name, buffer)` (no CSS
+        string built from theme input); SVG icons allowlist-parsed and rebuilt
+        as DOM nodes, never `innerHTML`; textures as size-capped `data:` URIs
+        only — an `https:` asset URL would leak the user's IP to the theme's
+        author on every launch.
+      - The default theme stays reachable, so a bad theme is recoverable.
+      — ARCHITECTURE §7a/§7b
 
 ## 8. Core engine (`player`)
 The player architecture is specified in detail in
@@ -782,8 +802,9 @@ engine. What an auditor should check:
   say so — `PlaybackAlert` surfaces the resolver's reason and distinguishes "no
   source has this track" from "no stream addon installed" from "addons
   unreachable". Silent failure is the defect this replaced.
-- **Not yet built, deliberately** (absence is not drift): router, theme
-  contract/registry (token layer only — §7a says ship one theme first),
-  source-picker modal, Artists/Playlists tabs, PWA/service worker (P-6). Phase
-  5's full exit criteria stay open pending `stream-debrid` and the measured
-  gapless matrix. **172 player tests; typecheck + `vite build` green.**
+- **Not yet built, deliberately** (absence is not drift): router, installable
+  themes (§7b — the token contract and three bundled themes landed 2026-07-22;
+  install/validate/store did not), source-picker modal, Playlists tab,
+  PWA/service worker (P-6). Phase 5's full exit criteria stay open pending
+  `stream-debrid` and the measured gapless matrix. **207 player tests;
+  typecheck + `vite build` green.**
