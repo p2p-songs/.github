@@ -803,6 +803,15 @@ engine. What an auditor should check:
   worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
   and the measured gapless matrix. **206 player tests; typecheck + `vite build`
   green.**
+- **Chrome is a second surface (§7a):** registry components assume the cream
+  canvas — RetroUI's `outline` button sets `bg-background` with no text colour,
+  so on `bg-chrome` it renders cream on cream. Silent: it typechecks, builds and
+  paints an invisible control. Chrome-side controls come from
+  `ChromeButton`/`TransportButton`.
+- **A dismissible alert must not silence the next one (§4b):** `PlaybackAlert`
+  dismissal is keyed by the problem text and cleared when the engine leaves the
+  error state. A boolean would re-introduce the silent-failure bug the component
+  was built to fix.
 - **Seeking commits on release, not on drag (§7a/§8a):** a slider bound straight
   to `seek` writes `currentTime` per pointer move and stutters the audio. The
   local dragged position is handed over on commit, which is seamless only
