@@ -803,6 +803,16 @@ engine. What an auditor should check:
   worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
   and the measured gapless matrix. **206 player tests; typecheck + `vite build`
   green.**
+- **Seeking commits on release, not on drag (§7a/§8a):** a slider bound straight
+  to `seek` writes `currentTime` per pointer move and stutters the audio. The
+  local dragged position is handed over on commit, which is seamless only
+  because `Engine.seek` dispatches `POSITION` synchronously — that is now a
+  contract the UI depends on. Volume persists, and is likewise written on commit.
+- **The now-playing overlay must be a real modal (§7a):** built on the Radix
+  dialog primitive so focus is trapped, Escape closes, and focus returns. It
+  shows the source *readout* but no source **picker**, no add-to-playlist and no
+  autoplay radio — those features don't exist and their controls must not be
+  drawn.
 - **Design-system state variants must resolve (§7a):** the registry's components
   use shorthand (`data-active:`, `data-horizontal:`) and Radix emits
   `data-state=` / `data-orientation=`; `globals.css` must declare the bridging
