@@ -607,18 +607,43 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
      pre-pass is load-bearing, not an optimization; a cached torrent settles in
      ~1330ms and RD round-trips run ~260ms, which calibrates the 3s wall-clock
      settle budget; and an uncached torrent is added, refused, and deleted with
-     the account's torrent count unchanged. This is the part of Phase 3's exit
-     criteria that CI cannot cover, now closed for the debrid half.
+     the account's torrent count unchanged. The settle budget bounds the **whole
+     check**, starting before `addMagnet` — measured misses now run 3.4–3.5s
+     against a 3s budget plus cleanup, where an earlier version that started the
+     clock after the add left three round-trips outside it and ran 848–6844ms.
    - **Outage semantics:** a total indexer failure or a rejected debrid key
      throws (uncacheable 500); a genuine no-match caches briefly — the same
      A-006 distinction `stream-legal` uses.
 
 **Exit criteria:** each manifest installs and responds correctly via
 `curl`; `stream-debrid` returns a playable direct URL for a real album
-given a real debrid API key. *(Status: the pipeline is implemented and fully
-tested against fakes. The final clause — a real album via a real key — is the
-one thing that needs the operator's own debrid account and indexers, so it
-remains an operator smoke test rather than a CI-verifiable claim.)*
+given a real debrid API key. **— MET (2026-07-22).**
+
+Closed by an operator smoke test, since the final clause needs a real debrid
+account and real indexers and can never be CI-verifiable. The full chain ran
+live — player → musicmeta → Bitbop → MusicBrainz → Prowlarr (Torznab) → RD cache
+check → `pickFile` → unrestrict → https link → audio playing — and the pieces
+worth recording are the ones only real data could establish:
+
+- **`pickFile` chose correctly 26/26** across two independently-encoded rips of
+  the same album, on both strategies (13/13 by disc+position, and the fuzzy path
+  on a sample). This is §2a's central claim, and it had never touched real data.
+- **Real-Debrid's file ids are not track order.** In one rip, file id 1 was
+  track 13 and file id 13 was track 1. Any implementation assuming id order — or
+  reaching for Torrentio's largest-file heuristic — would have served the wrong
+  song confidently, every time. §2a argued this from first principles; this is
+  the first empirical confirmation.
+- **Audio-only selection held:** 13 of 14 files selected in both torrents, cover
+  art excluded, and `links.length === selected.length` so the mismatch guard
+  never fired.
+- **Cleanup held:** exactly the two cached torrents were added and kept; five
+  deliberate misses left zero orphans.
+- Two matches survived only because of normalization: a request for `u + me = -3`
+  matched `05. u + me = 3.flac`, and `what’s wrong with me` uses a curly
+  apostrophe (U+2019) that NFKD folds. Naive comparison would have missed both.
+
+*(Not covered by this run, and still open: `catalog-charts`, `stream-ytmusic`,
+and `lyrics-lrclib` remain scaffolding — see the numbered list above.)*
 
 ### Phase 4 — Player core engine (headless)
 **Built per [`player/docs/ARCHITECTURE.md`](https://github.com/p2p-songs/player/blob/main/docs/ARCHITECTURE.md)

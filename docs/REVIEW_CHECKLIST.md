@@ -103,6 +103,15 @@ Each item names which repo(s) it applies to and which plan section it comes from
       This is the "cached-only" contract in Plan §2 actually being honoured: an
       addon that *starts* the downloads it promises never to wait for has broken
       it. — `addons/packages/bitbop/src/debrid/realdebrid.ts`
+- [ ] **The settle budget bounds the whole check, not just the polling.** It
+      starts before `addMagnet`, because the add, the first `info`, and the
+      selection call are three round-trips that otherwise sit outside it. Getting
+      this wrong twice is instructive: counting poll *attempts* ignored the
+      ~260ms each round-trip costs (a "2.5s" budget ran 4.8s), and then bounding
+      by wall clock but starting after the add let misses run 848–6844ms against
+      a "3s" budget. Only the cleanup `delete` is exempt — it must run whatever
+      time is left. Verify with a *miss*, not a hit: a cached torrent answers
+      long before any budget matters.
 - [ ] **Provider errors returned in a 200 body are parsed.** Real-Debrid reports
       application failures as `{error, error_code}` with an HTTP 200. Unchecked,
       an auth failure or rate limit surfaces later as an unrelated structural
@@ -403,6 +412,24 @@ answer), and the configure page offered AllDebrid + "include uncached" when
 neither could produce a stream (both removed from the **schema**, not just the
 UI, so an unusable install URL can't be produced or parsed). Bitbop 66 → 122
 tests.
+
+**Phase 3 exit criteria MET (2026-07-22) — first live end-to-end run.** The
+whole chain ran against a real Real-Debrid account and a real self-hosted
+Prowlarr: player → musicmeta → Bitbop → MusicBrainz → Torznab → RD cache check →
+`pickFile` → unrestrict → audio. **`pickFile` selected correctly 26/26** across
+two independently-encoded rips of one album (13/13 by disc+position each, plus
+the fuzzy path). Auditors should note what this run established that no fake
+could: **Real-Debrid's file ids are not track order** — in one rip file id 1 was
+track 13 and id 13 was track 1 — so any id-order or largest-file assumption
+serves the wrong song *confidently*. Audio-only selection held (13 of 14 files,
+cover art excluded, `links.length === selected.length`), and cleanup held (two
+cached torrents kept, five deliberate misses leaving zero orphans). Two matches
+survived only through normalization: `u + me = -3` → `05. u + me = 3.flac`, and a
+curly apostrophe (U+2019) in `what’s wrong with me`. Two live-found bugs were
+fixed in the same pass — compilations searched for "Various Artists" instead of
+the track's own artist, and a slow indexer cost its full timeout on *every*
+track because failures weren't remembered (now a replayed cooldown, which
+preserves the outage-vs-no-match distinction).
 
 **Debrid account-mutation fix (2026-07-21, not audit-driven).** Reading the
 current Real-Debrid API against MediaFusion, Comet, and StremThru surfaced a
