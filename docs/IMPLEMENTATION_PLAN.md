@@ -536,7 +536,7 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
 4. `stream-ytmusic` — `ytId`-style official YouTube embed
 5. `lyrics-lrclib` — lyrics resource
 6. **`stream-debrid` — shipped as `bitbop` — DONE (2026-07-21).** One
-   self-contained addon, Torrentio's shape (§2). 140 tests, none requiring
+   self-contained addon, Torrentio's shape (§2). 157 tests, none requiring
    network or a debrid account (indexers, debrid provider, and metadata are all
    injected behind interfaces).
    - **`/configure` page:** debrid provider + API key + the user's Torznab
@@ -559,7 +559,20 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
    - **File selection (§2a — the music-specific step):** deterministic by
      **disc + track position** when album context is present, fuzzy **title**
      match otherwise; returns *nothing* rather than a probably-wrong track.
-     "Largest file" is never used.
+     "Largest file" is never used. **Format preference is applied here**, not in
+     stream ranking: a music torrent commonly ships the same album in several
+     encodings (FLAC *and* MP3 *and* WAV of every track), so all of them match a
+     given track equally well and the user's `preferFormats` is what breaks the
+     tie. Ranking can't do it — it only ever sees one already-chosen file per
+     torrent — and "largest" is worse than useless, since uncompressed WAV wins
+     it every time.
+   - **Search results are cached, album-scoped.** JIT resolution issues one
+     `/stream` per track, but the indexer query is album-scoped, so a 12-track
+     album was sending 12 byte-identical searches. They now collapse to one, with
+     single-flight for the overlapping requests the player's prefetch produces,
+     a shorter TTL for empty answers, and failures never cached. In-memory and
+     bounded — Comet uses a 30-day database, but the addon stays stateless, and
+     candidate metadata is the only thing §3 permits caching.
    - **Debrid resolution:** cache-check → select file → unrestrict, every call
      using **that request's own** `/configure` key. A non-https unrestricted URL
      is rejected rather than passed to the player. `configurationRequired: true`
