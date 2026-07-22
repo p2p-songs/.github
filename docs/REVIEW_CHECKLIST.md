@@ -801,7 +801,7 @@ engine. What an auditor should check:
   kind (**removed** 2026-07-22 — one shipped look on RetroUI, §7a),
   source-picker modal, Playlists tab, responsive/mobile layout, PWA/service
   worker (P-6). Phase 5's full exit criteria stay open pending `stream-debrid`
-  and the measured gapless matrix. **206 player tests; typecheck + `vite build`
+  and the measured gapless matrix. **210 player tests; typecheck + `vite build`
   green.**
 - **A row must say what clicking it does (§7a):** lists mix kinds, and a song
   plays while an album/artist opens a screen. Play badge on the artwork ⇒ plays;
