@@ -581,6 +581,13 @@ Shared infra: **`@p2p-songs/musicbrainz`** — a shared rate-limited (≤1 req/s
      cache network (StremThru's Buddy/Peer): publishing which hashes are cached
      is a coordinated availability index, which §3 rules out. The cost is honest
      — the first query for an unknown torrent is always a real round-trip.
+     **Confirmed against a live Real-Debrid account (2026-07-21):** `addMagnet`
+     does **not** dedupe by hash (re-adding returns a new torrent id), so the
+     pre-pass is load-bearing, not an optimization; a cached torrent settles in
+     ~1330ms and RD round-trips run ~260ms, which calibrates the 3s wall-clock
+     settle budget; and an uncached torrent is added, refused, and deleted with
+     the account's torrent count unchanged. This is the part of Phase 3's exit
+     criteria that CI cannot cover, now closed for the debrid half.
    - **Outage semantics:** a total indexer failure or a rejected debrid key
      throws (uncacheable 500); a genuine no-match caches briefly — the same
      A-006 distinction `stream-legal` uses.
