@@ -537,15 +537,17 @@ decodes back to the handler's `config` arg). 22 SDK tests.
    half of the "shared fast index" idea that is unambiguously OK; the stream-hash
    half stays per-user inside Bitbop (§3).
 
-   **Pre-installed as the default metadata addon (planned).** Because it is
-   identity-only and legally inert, `musicmeta` may be **default-installed** in
-   the player — seeded as a manifest URL through the normal
-   `AddonCollection.install` path, so the player↔addon HTTP boundary is
-   preserved (the player bakes in no search logic). This **refines, not weakens,
-   the neutrality invariant** (player ARCHITECTURE §11): neutrality governs the
-   **stream plane** (no bundled stream addon, credentials, or sources); a default
-   **metadata** addon is permitted. The stream plane (Bitbop) stays strictly
-   user-installed. *Player-side wiring is a follow-up increment.*
+   **Pre-installed as the default metadata addon — DONE (2026-07-23).** Because
+   it is identity-only and legally inert, `musicmeta` is **default-installed** in
+   the player: seeded (once, removal respected) as a manifest URL through the
+   normal `AddonCollection.install` path, so the player↔addon HTTP boundary is
+   preserved and the engine bakes in no search logic. The URL is deployment
+   config (`VITE_DEFAULT_METADATA_ADDON_URL`; unset → no default). This
+   **refines, not weakens, the neutrality invariant** (player ARCHITECTURE §11,
+   REVIEW_CHECKLIST §1): neutrality governs the **stream plane** (no bundled
+   stream addon, credentials, or sources); a default **metadata** addon is
+   permitted. The stream plane (Bitbop) stays strictly user-installed. See the
+   player's `app/default-addons.ts` (5 tests).
 2. `catalog-charts` — MusicBrainz + ListenBrainz-backed catalogs
 3. `stream-legal` — Internet Archive (+ optional Jamendo) direct-URL streams —
    **DONE (2026-07-19; hardened per A-006 2026-07-20).** Zero-config; recording
