@@ -15,8 +15,19 @@ Each item names which repo(s) it applies to and which plan section it comes from
 
 ## 1. Protocol neutrality (`player`, `addon-sdk`)
 - [ ] The `player` (its `src/core` engine) never bundles, default-installs, or
-      hardcodes *any* specific stream addon (including `stream-debrid`). Addon
-      installation is exclusively "user pastes a manifest URL." — Plan §3
+      hardcodes *any* specific **stream** addon (including `stream-debrid`).
+      Neutrality governs the **stream plane**: no bundled stream source, no
+      bundled credentials. A **metadata/catalog** addon (`musicmeta`) *may* be
+      default-installed — it is identity-only (public catalogue facts, no hashes,
+      no sources) and so cannot steer anyone to a content source. Any such
+      default is still installed via the ordinary "manifest URL" path, not baked
+      into the engine. — Plan §3; player ARCHITECTURE §11
+- [ ] A default-installed metadata addon's index (e.g. `musicmeta` + Meilisearch)
+      stores **identity only** (`metaPreview`: id, name, poster) and is an
+      **accelerator, not a dependency** — never infohashes/availability, and its
+      absence or failure must degrade to direct upstream, not to a broken
+      catalog. (A *stream*-side shared hash/availability index is the thing §3
+      forbids — do not conflate the two.) — Plan §3
 - [ ] `addon-sdk` imposes no assumptions about what kind of stream source
       an addon built with it uses — it's transport/protocol tooling only,
       content-agnostic. — Plan §1, §3

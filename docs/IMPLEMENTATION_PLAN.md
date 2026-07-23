@@ -519,8 +519,33 @@ decodes back to the handler's `config` arg). 22 SDK tests.
    `metaPreview[]` per content type; MusicBrainz lookup → `metaDetail`, album meta
    carrying `tracks[]` with both `recordingId` (streamable) + `trackId` (album
    context: disc + free-text position) + Cover Art Archive posters. MB client
-   injected; 17 tests (incl. fake-`fetch` release→tracks parsing). The
+   injected; 24 tests (incl. fake-`fetch` release→tracks parsing). The
    discovery→stream loop is verified end-to-end with #3. Not yet audited.
+
+   **Search index (2026-07-23).** Catalog search takes an optional
+   **Meilisearch** accelerator (`SearchIndex` port): **read-through** (index
+   first, ranked + typo-tolerant) / **write-back** (a MusicBrainz miss hydrates
+   the index), so `"justin bieber baby"` finds the *song*, not just the artist,
+   and popular queries get faster over time. Chosen over Typesense (GPL-3.0 vs
+   Meilisearch's **MIT** — this addon is meant to be self-hosted by others) and
+   Postgres FTS (no typo tolerance). Two invariants: it stores **identity only**
+   (a `metaPreview` — entity-typed id, name, poster; **no hashes, no sources**),
+   so it is legally inert and safe to host/share — unlike a *stream*-side hash
+   cache, which §3 rules out (see the `stream-debrid`/Buddy note); and it is an
+   **accelerator, never a dependency** — absent (`MEILI_URL` unset) or failing,
+   catalog search is exactly the original direct-MusicBrainz path. This is the
+   half of the "shared fast index" idea that is unambiguously OK; the stream-hash
+   half stays per-user inside Bitbop (§3).
+
+   **Pre-installed as the default metadata addon (planned).** Because it is
+   identity-only and legally inert, `musicmeta` may be **default-installed** in
+   the player — seeded as a manifest URL through the normal
+   `AddonCollection.install` path, so the player↔addon HTTP boundary is
+   preserved (the player bakes in no search logic). This **refines, not weakens,
+   the neutrality invariant** (player ARCHITECTURE §11): neutrality governs the
+   **stream plane** (no bundled stream addon, credentials, or sources); a default
+   **metadata** addon is permitted. The stream plane (Bitbop) stays strictly
+   user-installed. *Player-side wiring is a follow-up increment.*
 2. `catalog-charts` — MusicBrainz + ListenBrainz-backed catalogs
 3. `stream-legal` — Internet Archive (+ optional Jamendo) direct-URL streams —
    **DONE (2026-07-19; hardened per A-006 2026-07-20).** Zero-config; recording
