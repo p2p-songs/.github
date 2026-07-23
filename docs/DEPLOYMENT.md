@@ -10,6 +10,16 @@ The parts:
 - **Bitbop** — an addon process. Holds the *user's* debrid key for the duration
   of a request, and queries a Torznab indexer server-side.
 - **Prowlarr/Jackett** — the indexer Bitbop queries.
+- **musicmeta** — the metadata/catalog addon, and the one *pre-installed*
+  default (§11). Hosted once, centrally; holds no user credential. Optionally
+  fronts a **Meilisearch** search index.
+- **Meilisearch** (optional) — a private search index behind `musicmeta`. Holds
+  only public catalogue data (identity — never hashes or sources) and is never
+  exposed to clients.
+
+The first three are the **stream plane**; the last two are the **metadata
+plane**, which has the opposite neutrality shape — see "The metadata plane"
+below.
 
 ## The rule everything else follows
 
@@ -82,6 +92,53 @@ as CGNAT. That is correct, and it means a tailnet Prowlarr only works for a
 single-user Bitbop with the flag set, or as an operator-supplied URL under
 Shape B.
 
+## The metadata plane: hosted musicmeta + shared Meilisearch
+
+Everything above is the **stream plane** (player → Bitbop → indexer), where
+neutrality forbids the operator choosing sources. The **metadata plane** is
+separate and has the opposite shape: `musicmeta` is public reference data
+(MusicBrainz catalogue — entity-typed ids, names, posters; no hashes, no
+sources), so it is the one addon a hosted player **pre-installs** (§11). It is
+seeded through the ordinary install path, once, and a user can remove it.
+
+Because it is hosted once and shared by every player, its optional Meilisearch
+search index is a **shared cache by construction** — no per-user setup, no
+accounts:
+
+```
+player A ┐
+player B ├─HTTP─▶  one hosted musicmeta  ─▶  Meilisearch (private)
+player C ┘                  │
+                            └─▶ MusicBrainz (only on a cold miss)
+```
+
+Three properties make this safe and self-administering:
+
+- **One writer, and it is the addon — never a user.** A player only ever issues
+  a read (a catalog search). `musicmeta` is what writes, as an internal side
+  effect of serving a miss (fetch from MusicBrainz → hydrate). The write path
+  `musicmeta → Meilisearch` lives entirely inside the operator's network.
+- **It warms itself from aggregate traffic; nobody needs write access.** Every
+  player on the hosted default contributes to warming the index just by
+  searching — no permission, no account, because they are not writing. There is
+  no external write surface to abuse, and nothing to grant or revoke.
+- **Meilisearch is never exposed to clients.** It is the write path and holds no
+  auth of its own, so it sits on a private network behind `musicmeta`. Players
+  reach the shared cache *through the addon*, preserving the protocol boundary.
+  Wire it with `MEILI_URL` / `MEILI_API_KEY` on the `musicmeta` process; unset,
+  `musicmeta` is plain MusicBrainz.
+
+This is the identity-only half of the "shared index" idea, and it is exactly why
+it is allowed where a shared **stream**-hash / availability index is not (Plan
+§3): a metadata cache points at *songs*, never at *copies* of them. A self-hoster
+who runs their own `musicmeta` is simply isolated — they neither warm nor read
+the shared index, and opting in is the same act as using the default addon.
+
+Scaling note: the shared cache also protects the **MusicBrainz ≤1 req/sec/IP**
+budget — a given query hits MusicBrainz once across *all* users ever, then serves
+from Meilisearch. A per-user cache would pay that once per user, which is why one
+hosted `musicmeta` + one shared index is what makes the metadata plane scale.
+
 ## Trust cost, stated to the user
 
 A public Bitbop instance can read **both** credentials in a Shape A config: the
@@ -113,11 +170,14 @@ arguments.
 
 ## What the operator must not do
 
-- **Do not ship a recommended-addons list**, and do not preinstall Bitbop in a
-  hosted player. The temptation arrives exactly when hosting makes onboarding
-  friction visible. A curated list naming a debrid addon is the difference
-  between hosting a player and distributing a piracy tool, and no code review
-  catches it as a defect (Plan §3, Checklist §11).
+- **Do not ship a recommended *stream*-addon list, and do not preinstall Bitbop
+  or any other stream/source addon** in a hosted player. (Preinstalling the
+  *metadata* addon, `musicmeta`, is fine and expected — see "The metadata plane"
+  above; it names no source and cannot steer anyone to one. The prohibition is
+  the stream plane.) The temptation arrives exactly when hosting makes onboarding
+  friction visible. A curated list naming a debrid or source addon is the
+  difference between hosting a player and distributing a piracy tool, and no code
+  review catches it as a defect (Plan §3, Checklist §11).
 - **Do not proxy addon traffic through the player's origin.** The player stays
   static files. Anything of the operator's that relays addon requests makes the
   operator a party to that traffic and forfeits the neutrality that makes public

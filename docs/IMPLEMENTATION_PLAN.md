@@ -535,7 +535,12 @@ decodes back to the handler's `config` arg). 22 SDK tests.
    **accelerator, never a dependency** — absent (`MEILI_URL` unset) or failing,
    catalog search is exactly the original direct-MusicBrainz path. This is the
    half of the "shared fast index" idea that is unambiguously OK; the stream-hash
-   half stays per-user inside Bitbop (§3).
+   half stays per-user inside Bitbop (§3). **Sharing is a deployment fact, not
+   more code:** `musicmeta` is hosted once (like Cinemeta), so one Meilisearch
+   behind it is a shared cache for every player by construction — warmed
+   automatically from aggregate query traffic, with the *addon* as the sole
+   (internal) writer, so no user ever needs write access. See `DEPLOYMENT.md` →
+   "The metadata plane".
 
    **Pre-installed as the default metadata addon — DONE (2026-07-23).** Because
    it is identity-only and legally inert, `musicmeta` is **default-installed** in
