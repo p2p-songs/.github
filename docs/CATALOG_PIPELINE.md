@@ -66,23 +66,40 @@ NDJSON. R2 is the public handoff between the offline and runtime halves.
 
 ## Curation — official only, by construction
 
-- **Content + scope in one file** — the **MusicBrainz canonical data dump**
-  (`canonical_musicbrainz_data.csv`, CC0). It is deduplicated (one canonical
-  release per recording, which dissolves the edition/pressing ambiguity that bit
-  the old design) *and* carries a `score` column that is **ListenBrainz-listen-
-  derived popularity**. Keeping the **top-N by score** gives billboard-grade
-  scope *without* Billboard's proprietary chart data (which we cannot
-  redistribute) and without a separate popularity join.
-- **Official by construction** — the canonical mapping already prefers official
-  releases over compilations/live/bootleg when it picks the canonical release, and
-  the build **never runs a free-text search** (which is what surfaced parodies in
-  the old design). So junk cannot enter through the query path. The one
-  approximation versus the API prototype: the strict release-group secondary-type
-  filter (`-secondarytype:*`) isn't expressible from the canonical CSV alone — the
-  popularity scope and canonical selection stand in for it.
+Two CC0 sources are **joined**, popularity from one and content from the other:
 
-Nothing is built by crawling the MusicBrainz API at ≤1 req/sec; the bulk dump is
-streamed and processed offline, so a full rebuild is fast and never rate-limited.
+- **Popularity scope** — ListenBrainz **sitewide top artists** (`/1/stats/sitewide/
+  artists`): the most-listened artists, each with a real all-time listen count. The
+  top ~1000 artists is billboard-grade scope *without* Billboard's proprietary chart
+  data (which we cannot redistribute). (The sitewide stats hard-cap at ~1000 rows per
+  type, which is why we scope at the *artist* level and take breadth from the dump,
+  rather than trying to page millions of recordings.)
+- **Content/breadth** — the **MusicBrainz canonical data dump**
+  (`canonical_musicbrainz_data.csv`, CC0): deduplicated (one canonical release per
+  recording, which dissolves the edition/pressing ambiguity that bit the old design),
+  streamed offline. The build keeps only the rows whose **primary artist MBID is in
+  the popularity scope**, so each popular artist's whole catalogue enters with no
+  per-artist API calls.
+
+Each document's ranking `score` is its **artist's listen count**, so a top artist's
+songs outrank a #900 artist's on a relevance tie.
+
+> **A correction worth recording.** An earlier build used the canonical dump's own
+> `score` column as the popularity signal. It is **not** one — it behaves like a row
+> ordinal, so "top-N by score" returned ~random obscure recordings (a live check
+> found no popular artist in the index at all). The ListenBrainz listen-count join
+> above is the fix, and it is what the plan meant by "ListenBrainz popularity **+**
+> MB canonical dump" all along.
+
+**Official by construction:** scoping to popular artists excludes parodies/covers by
+*other* people entirely (a Weird Al parody has a different artist MBID), and the build
+never runs a free-text search. The remaining looseness — a popular artist's own live/
+remix recordings can appear — is acceptable (they are legitimately that artist's) and
+far milder than the old free-text junk.
+
+Only the ListenBrainz artist list is fetched over the network (a few fast, uncapped
+calls); the multi-GB canonical dump is streamed offline, so a full rebuild is fast and
+never hits the MusicBrainz ≤1 req/sec budget.
 
 ## The golden dataset & versioning
 
@@ -123,10 +140,9 @@ Ranking is driven by a stored **`searchtext = "<artist> <album> <title>"`** fiel
 (searchable-attributes: `searchtext`, then `name`, `description`; filterable:
 `type`; sortable: `score`). Popularity is the **final ranking tiebreaker**: the
 ranking rules end in `score:desc`, so relevance still decides first but among
-equally-relevant hits the more popular one wins (the `score` is the canonical
-dump's ListenBrainz-derived popularity). Putting artist + album + title adjacent in
-one field is what makes real user queries work, validated against Meili's ranking
-with real data:
+equally-relevant hits the more popular one wins (the `score` is the artist's
+ListenBrainz listen count). Putting artist + album + title adjacent in one field is
+what makes real user queries work, validated against Meili's ranking with real data:
 
 | A user types… | resolves to |
 |---|---|
@@ -176,20 +192,15 @@ The offline pipeline is the **`@p2p-songs/catalog-builder`** package in the
 import | fetch | versions | rollback`, credentials from the environment only. See
 its `README.md`.
 
-**The data source, concretely.** `build` streams the **MusicBrainz canonical data
+**The data source, concretely.** `build` first fetches the top `CATALOG_ARTIST_LIMIT`
+artists (default 1000) from ListenBrainz sitewide stats — a few fast calls giving
+`{mbid, name, listenCount}` each — then streams the **MusicBrainz canonical data
 dump** (`canonical_musicbrainz_data.csv`; CC0; ~2 GB zstd, refreshed the 1st &
-15th). That one file is already deduplicated (one canonical release per recording)
-*and* carries a `score` column that is a ListenBrainz-listen-derived popularity
-ranking — so it supplies both the content and the popularity scope in a single
-pass, no separate join and no live API. We keep the **top-N recordings by score**
-(`CATALOG_LIMIT`, default 250 000) in a bounded min-heap and derive artist/album/
-track docs from exactly that set (artist docs only for single-artist credits — a
-joint "X feat. Y" credit has no single name to attribute). Official-by-construction:
-canonical selection already prefers official releases and no free-text search is
-ever run, so parodies/covers/bootlegs can't enter. The stricter release-group
-secondary-type filter (`-secondarytype:*`) that the API traversal applied is not
-expressible from the canonical CSV alone; the popularity scope + canonical selection
-stand in for it, and it's the one deliberate approximation versus the prototype.
+15th), keeping only rows whose primary artist MBID is in that set. It derives artist
+docs from the ListenBrainz list (clean names + listen counts) and album/track docs
+from the kept canonical rows, deduplicated per entity, each carrying its artist's
+listen count as the ranking `score` and a Cover Art Archive poster from its canonical
+release. Memory is bounded to the scoped artists' catalogues, not the whole dump.
 
 **Status (2026-07-24):** storage + import proven end-to-end against real R2 and
 Meili (versioned publish, checksum-verified fetch, zero-downtime import, unified
@@ -198,12 +209,14 @@ search over the imported data). Built and pending:
 - [x] R2 versioned golden-dataset layer (publish/fetch/verify/versions/rollback)
 - [x] Zero-downtime Meili import (staging + atomic swap)
 - [x] `searchtext` ranking + unified cross-type search (validated)
-- [x] Popularity (`score`) as the final ranking tiebreaker
-- [x] Per-type counts in the manifest (for the player)
-- [x] **Full-scale source** — `build` over the MB canonical dump (popularity-scoped,
-      official-by-construction; replaces the `build-sample.mjs` prototype)
-- [x] Nightly GitHub Action (build+publish → R2) — proven end-to-end in CI
+- [x] Popularity (`score` = artist listen count) as the final ranking tiebreaker
+- [x] Per-type counts (from Meili's `type` facet, served at `/stats`)
+- [x] **Full-scale source** — `build` = ListenBrainz top artists ⋈ MB canonical dump
+      (real popularity scope; replaces both the `build-sample.mjs` prototype and the
+      abandoned canonical-`score` attempt)
+- [x] Nightly GitHub Action (build+publish → R2)
 - [x] Railway import job (scheduled `import` inside the private network) —
       `deploy/catalog-importer.Dockerfile` + compose `import` profile + railway docs
-- [ ] Slim `musicmeta` to Meili-only serving + a `/stats` endpoint (counts)
+- [x] Slim `musicmeta` to Meili-only search + a `/stats` endpoint (counts) —
+      read-only Meili client, no read-through/write-back, `SDK serveHTTP extraRoutes`
 - [ ] Player: unified search UI + "X songs · Y albums · Z artists indexed"
