@@ -66,19 +66,23 @@ NDJSON. R2 is the public handoff between the offline and runtime halves.
 
 ## Curation — official only, by construction
 
-- **Scope** comes from **ListenBrainz popularity** (CC0 listen data — which
-  artists/recordings are actually popular). Billboard-grade curation *without*
-  Billboard's proprietary chart data (which we cannot redistribute).
-- **Content** comes from the **MusicBrainz canonical bulk dump** (CC0; already
-  NDJSON; deduplicated — one canonical record per recording/release, which also
-  dissolves the edition/pressing ambiguity that bit the old design).
-- **Official-only filter:** albums are official studio release-groups
-  (`primarytype:album AND -secondarytype:*`); traversal is *by artist*, never
-  free-text — so parodies/live/compilations/bootlegs can never enter. This is the
-  same filter the shared MusicBrainz client's `artistDiscography` already applies.
+- **Content + scope in one file** — the **MusicBrainz canonical data dump**
+  (`canonical_musicbrainz_data.csv`, CC0). It is deduplicated (one canonical
+  release per recording, which dissolves the edition/pressing ambiguity that bit
+  the old design) *and* carries a `score` column that is **ListenBrainz-listen-
+  derived popularity**. Keeping the **top-N by score** gives billboard-grade
+  scope *without* Billboard's proprietary chart data (which we cannot
+  redistribute) and without a separate popularity join.
+- **Official by construction** — the canonical mapping already prefers official
+  releases over compilations/live/bootleg when it picks the canonical release, and
+  the build **never runs a free-text search** (which is what surfaced parodies in
+  the old design). So junk cannot enter through the query path. The one
+  approximation versus the API prototype: the strict release-group secondary-type
+  filter (`-secondarytype:*`) isn't expressible from the canonical CSV alone — the
+  popularity scope and canonical selection stand in for it.
 
-Nothing is built by crawling the MusicBrainz API at ≤1 req/sec; the bulk dumps are
-processed offline, so a full rebuild is fast and never rate-limited.
+Nothing is built by crawling the MusicBrainz API at ≤1 req/sec; the bulk dump is
+streamed and processed offline, so a full rebuild is fast and never rate-limited.
 
 ## The golden dataset & versioning
 
@@ -117,8 +121,12 @@ relevance-ranked together: "justin bieber" → the artist, "my world" → the al
 
 Ranking is driven by a stored **`searchtext = "<artist> <album> <title>"`** field
 (searchable-attributes: `searchtext`, then `name`, `description`; filterable:
-`type`). Putting artist + album + title adjacent in one field is what makes real
-user queries work, validated against Meili's ranking with real data:
+`type`; sortable: `score`). Popularity is the **final ranking tiebreaker**: the
+ranking rules end in `score:desc`, so relevance still decides first but among
+equally-relevant hits the more popular one wins (the `score` is the canonical
+dump's ListenBrainz-derived popularity). Putting artist + album + title adjacent in
+one field is what makes real user queries work, validated against Meili's ranking
+with real data:
 
 | A user types… | resolves to |
 |---|---|
@@ -164,9 +172,24 @@ user queries work, validated against Meili's ranking with real data:
 ## Implementation
 
 The offline pipeline is the **`@p2p-songs/catalog-builder`** package in the
-`addons` repo (not shipped in the runtime addon) — `publish | stage | import |
-fetch | versions | rollback`, credentials from the environment only. See its
-`README.md`.
+`addons` repo (not shipped in the runtime addon) — `build | publish | stage |
+import | fetch | versions | rollback`, credentials from the environment only. See
+its `README.md`.
+
+**The data source, concretely.** `build` streams the **MusicBrainz canonical data
+dump** (`canonical_musicbrainz_data.csv`; CC0; ~2 GB zstd, refreshed the 1st &
+15th). That one file is already deduplicated (one canonical release per recording)
+*and* carries a `score` column that is a ListenBrainz-listen-derived popularity
+ranking — so it supplies both the content and the popularity scope in a single
+pass, no separate join and no live API. We keep the **top-N recordings by score**
+(`CATALOG_LIMIT`, default 250 000) in a bounded min-heap and derive artist/album/
+track docs from exactly that set (artist docs only for single-artist credits — a
+joint "X feat. Y" credit has no single name to attribute). Official-by-construction:
+canonical selection already prefers official releases and no free-text search is
+ever run, so parodies/covers/bootlegs can't enter. The stricter release-group
+secondary-type filter (`-secondarytype:*`) that the API traversal applied is not
+expressible from the canonical CSV alone; the popularity scope + canonical selection
+stand in for it, and it's the one deliberate approximation versus the prototype.
 
 **Status (2026-07-24):** storage + import proven end-to-end against real R2 and
 Meili (versioned publish, checksum-verified fetch, zero-downtime import, unified
@@ -175,9 +198,11 @@ search over the imported data). Built and pending:
 - [x] R2 versioned golden-dataset layer (publish/fetch/verify/versions/rollback)
 - [x] Zero-downtime Meili import (staging + atomic swap)
 - [x] `searchtext` ranking + unified cross-type search (validated)
+- [x] Popularity (`score`) as the final ranking tiebreaker
 - [x] Per-type counts in the manifest (for the player)
-- [ ] **Full-scale source** — ListenBrainz popularity + MB canonical dump
-      (replaces the per-artist API prototype `build-sample.mjs`)
+- [x] **Full-scale source** — `build` over the MB canonical dump (popularity-scoped,
+      official-by-construction; replaces the `build-sample.mjs` prototype)
+- [x] Nightly GitHub Action (build+publish → R2)
+- [ ] Railway import job (scheduled `import` inside the private network)
 - [ ] Slim `musicmeta` to Meili-only serving + a `/stats` endpoint (counts)
 - [ ] Player: unified search UI + "X songs · Y albums · Z artists indexed"
-- [ ] Nightly GitHub Action (build+publish) + Railway import job
