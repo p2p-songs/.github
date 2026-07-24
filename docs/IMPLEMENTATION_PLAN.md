@@ -522,25 +522,32 @@ decodes back to the handler's `config` arg). 22 SDK tests.
    injected; 24 tests (incl. fake-`fetch` release→tracks parsing). The
    discovery→stream loop is verified end-to-end with #3. Not yet audited.
 
-   **Search index (2026-07-23).** Catalog search takes an optional
-   **Meilisearch** accelerator (`SearchIndex` port): **read-through** (index
-   first, ranked + typo-tolerant) / **write-back** (a MusicBrainz miss hydrates
-   the index), so `"justin bieber baby"` finds the *song*, not just the artist,
-   and popular queries get faster over time. Chosen over Typesense (GPL-3.0 vs
-   Meilisearch's **MIT** — this addon is meant to be self-hosted by others) and
-   Postgres FTS (no typo tolerance). Two invariants: it stores **identity only**
-   (a `metaPreview` — entity-typed id, name, poster; **no hashes, no sources**),
-   so it is legally inert and safe to host/share — unlike a *stream*-side hash
-   cache, which §3 rules out (see the `stream-debrid`/Buddy note); and it is an
-   **accelerator, never a dependency** — absent (`MEILI_URL` unset) or failing,
-   catalog search is exactly the original direct-MusicBrainz path. This is the
-   half of the "shared fast index" idea that is unambiguously OK; the stream-hash
-   half stays per-user inside Bitbop (§3). **Sharing is a deployment fact, not
-   more code:** `musicmeta` is hosted once (like Cinemeta), so one Meilisearch
-   behind it is a shared cache for every player by construction — warmed
-   automatically from aggregate query traffic, with the *addon* as the sole
-   (internal) writer, so no user ever needs write access. See `DEPLOYMENT.md` →
-   "The metadata plane".
+   **Search: a curated Meilisearch catalogue (2026-07-24 — supersedes the
+   read-through/write-back accelerator).** Meilisearch began as an *accelerator*
+   in front of live MusicBrainz, but writing back whatever a free-text search
+   returned filled the index with parodies/covers and coupled every cold query to
+   the ≤1 req/sec/IP budget. So the plane was **inverted**: Meilisearch is now the
+   **curated catalogue `musicmeta` serves from**, and MusicBrainz is an *offline*
+   source for building it — never touched at request time. An offline pipeline
+   traverses **official release-groups only** (so parodies/live/bootlegs can't
+   enter), scoped by **ListenBrainz popularity** and sourced from the **MusicBrainz
+   canonical bulk dump** (both CC0), and publishes a versioned **golden NDJSON
+   dataset to R2** (object storage we own = the system of record); a runtime
+   **import** reindexes Meili with an atomic zero-downtime swap. The player gets
+   **one unified search** over artists/albums/songs, ranked by a stored
+   `searchtext = "<artist> <album> <title>"`.
+
+   Two invariants **hold**: it is **identity only** (`metaPreview` — id, name,
+   poster; **no hashes, no sources**), so legally inert and shareable — unlike a
+   *stream*-side hash cache, which §3 rules out; and neutrality still permits a
+   default *metadata* addon (below). One invariant **changed**: Meili is now a
+   **required curated store**, not an "accelerator, never a dependency" — there is
+   no live-MB fallback, so its resilience comes from the rebuildable, provider-
+   portable golden dataset in R2, not from degrading to upstream. Meilisearch
+   chosen over Typesense (GPL-3.0 vs **MIT**) and Postgres FTS (no typo tolerance).
+   **Full design: [`docs/CATALOG_PIPELINE.md`](./CATALOG_PIPELINE.md)**; where the
+   pieces run: `DEPLOYMENT.md` → "The metadata plane". Built via the
+   `@p2p-songs/catalog-builder` package (offline, not shipped in the addon).
 
    **Pre-installed as the default metadata addon — DONE (2026-07-23).** Because
    it is identity-only and legally inert, `musicmeta` is **default-installed** in

@@ -21,6 +21,10 @@ Start here regardless of which repo you're actually working in:
   indexer may be arranged once the player is publicly hosted; the two config
   shapes (user-supplied vs operator-supplied indexer), which combinations are
   safe, and the browser constraints a public origin introduces.
+- [`docs/CATALOG_PIPELINE.md`](./docs/CATALOG_PIPELINE.md) — the **metadata
+  plane**: how the curated music catalogue is built offline from MusicBrainz,
+  versioned to R2 as a golden dataset, and served from Meilisearch (which is now a
+  curated store, not an accelerator). Source of truth for search/catalogue.
 - [`docs/ADVERSARIAL_REVIEW_CONTRACT.md`](./docs/ADVERSARIAL_REVIEW_CONTRACT.md) —
   the operating agreement between the implementer and an on-demand
   auditor: scope, ground rules, finding format, and how findings get

@@ -92,62 +92,63 @@ as CGNAT. That is correct, and it means a tailnet Prowlarr only works for a
 single-user Bitbop with the flag set, or as an operator-supplied URL under
 Shape B.
 
-## The metadata plane: hosted musicmeta + shared Meilisearch
+## The metadata plane: hosted musicmeta + a curated Meilisearch catalogue
 
 Everything above is the **stream plane** (player → Bitbop → indexer), where
 neutrality forbids the operator choosing sources. The **metadata plane** is
 separate and has the opposite shape: `musicmeta` is public reference data
-(MusicBrainz catalogue — entity-typed ids, names, posters; no hashes, no
-sources), so it is the one addon a hosted player **pre-installs** (§11). It is
-seeded through the ordinary install path, once, and a user can remove it.
+(entity-typed ids, names, posters; no hashes, no sources), so it is the one addon
+a hosted player **pre-installs** (§11). It is seeded through the ordinary install
+path, once, and a user can remove it.
 
-Because it is hosted once and shared by every player, its optional Meilisearch
-search index is a **shared cache by construction** — no per-user setup, no
-accounts:
+Meilisearch here is **not an accelerator in front of live MusicBrainz** — that was
+the earlier design and it filled the index with parodies and coupled every query
+to MusicBrainz's rate budget. It is now the **curated catalogue `musicmeta` serves
+from**, built offline and shipped in via a versioned dataset. Full design:
+[`CATALOG_PIPELINE.md`](./CATALOG_PIPELINE.md). Topology:
 
 ```
-player A ┐
-player B ├─HTTP─▶  one hosted musicmeta  ─▶  Meilisearch (private)
-player C ┘                  │
-                            └─▶ MusicBrainz (only on a cold miss)
+  OFFLINE (GitHub Action)            R2 (object storage you own)      RUNTIME (Railway)
+  ListenBrainz + MB canonical  ──►   datasets/catalog-<ts>.ndjson  ──►  import ──► Meilisearch
+  bulk dump → build → publish        latest.json (sha256, counts)        (private) ▲
+                                                                                    │ serves
+   player A ┐                                                                       │
+   player B ├────────────────── HTTP ──────────────────────────────►  musicmeta ───┘
+   player C ┘
 ```
 
-Three properties make this safe and self-administering:
+Properties that make this safe and operable:
 
-- **One writer, and it is the addon — never a user.** A player only ever issues
-  a read (a catalog search). `musicmeta` is what writes, as an internal side
-  effect of serving a miss (fetch from MusicBrainz → hydrate). The write path
-  `musicmeta → Meilisearch` lives entirely inside the operator's network.
-- **It warms itself from aggregate traffic; nobody needs write access.** Every
-  player on the hosted default contributes to warming the index just by
-  searching — no permission, no account, because they are not writing. There is
-  no external write surface to abuse, and nothing to grant or revoke.
-- **Meilisearch is never exposed to clients.** It is the write path and holds no
-  auth of its own, so it sits on a private network behind `musicmeta`. Players
-  reach the shared cache *through the addon*, preserving the protocol boundary.
-  Wire it with `MEILI_URL` / `MEILI_API_KEY` on the `musicmeta` process; unset,
-  `musicmeta` is plain MusicBrainz.
+- **One writer, and it is the offline pipeline — never a user, never
+  request-time.** Players only ever *read* (a catalogue search). Nothing writes to
+  the index on the request path; there is no external write surface to abuse.
+- **MusicBrainz is not in the serving path at all.** It is an *offline* source for
+  the nightly build, so user traffic never touches the ≤1 req/sec/IP budget. That
+  is what makes one hosted `musicmeta` scale to many players.
+- **Meilisearch is never exposed to clients.** It sits on a private network behind
+  `musicmeta` (`meilisearch.railway.internal`). Wire it with `MEILI_URL` /
+  `MEILI_API_KEY` on the `musicmeta` process.
+- **The import must run inside the private network** (a Railway job, or `musicmeta`
+  noticing `latest.json`'s sha256 changed), because Meili is private. The
+  **build+publish** half runs off-box and only needs R2 credentials. **R2 is the
+  public handoff** between the two halves — and the durable, provider-independent
+  system of record, so Railway having no managed backups does not matter (restore =
+  re-import the NDJSON anywhere).
 
-This is the identity-only half of the "shared index" idea, and it is exactly why
-it is allowed where a shared **stream**-hash / availability index is not (Plan
-§3): a metadata cache points at *songs*, never at *copies* of them. A self-hoster
-who runs their own `musicmeta` is simply isolated — they neither warm nor read
-the shared index, and opting in is the same act as using the default addon.
+This is still the **identity-only** half of the "shared index" idea, which is why
+it is allowed where a shared **stream**-hash / availability index is not (Plan §3):
+the catalogue points at *songs*, never at *copies* of them. Note the catalogue is
+**curated/official-only, not exhaustive**; the player surfaces the indexed counts
+("X songs · Y albums · Z artists") so users know the scope.
 
-Scaling note: the shared cache also protects the **MusicBrainz ≤1 req/sec/IP**
-budget — a given query hits MusicBrainz once across *all* users ever, then serves
-from Meilisearch. A per-user cache would pay that once per user, which is why one
-hosted `musicmeta` + one shared index is what makes the metadata plane scale.
-
-**Ready-to-run assets:** the `addons` repo ships this whole plane under
+**Ready-to-run assets:** the `addons` repo ships the hosting side under
 [`addons/deploy/`](https://github.com/p2p-songs/addons/tree/main/deploy) — a
-`docker-compose.yml` (musicmeta + a private Meilisearch on one box, Tier 0
-~€5–12/mo), a Railway two-service setup (~$15–25/mo), off-box Meilisearch
-backups, and the Cloudflare edge (the cache rule on catalog responses + one
-rate-limit rule + Bot Fight Mode). Hosting-provider trade-offs (why a stateful
-Meilisearch box can't be serverless, why the edge cache is the load-bearing
-piece for a default-installed addon) are captured there. Meilisearch stays on a
-private network behind `musicmeta`; only `musicmeta` faces Cloudflare.
+`docker-compose.yml` (musicmeta + a private Meilisearch on one box), a Railway
+two-service setup, off-box Meilisearch snapshots, and the Cloudflare edge (cache
+rule on catalogue responses + rate limit + Bot Fight Mode). The pipeline itself is
+the [`@p2p-songs/catalog-builder`](https://github.com/p2p-songs/addons/tree/main/packages/catalog-builder)
+package. Meilisearch stays private behind `musicmeta`; only `musicmeta` faces
+Cloudflare.
 
 ## Trust cost, stated to the user
 

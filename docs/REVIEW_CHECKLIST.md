@@ -22,12 +22,20 @@ Each item names which repo(s) it applies to and which plan section it comes from
       no sources) and so cannot steer anyone to a content source. Any such
       default is still installed via the ordinary "manifest URL" path, not baked
       into the engine. — Plan §3; player ARCHITECTURE §11
-- [ ] A default-installed metadata addon's index (e.g. `musicmeta` + Meilisearch)
-      stores **identity only** (`metaPreview`: id, name, poster) and is an
-      **accelerator, not a dependency** — never infohashes/availability, and its
-      absence or failure must degrade to direct upstream, not to a broken
-      catalog. (A *stream*-side shared hash/availability index is the thing §3
-      forbids — do not conflate the two.) — Plan §3
+- [ ] A default-installed metadata addon's index (`musicmeta` + Meilisearch)
+      stores **identity only** (`metaPreview`: id, name, poster — **no
+      infohashes/availability/sources**). This is the load-bearing invariant and
+      it holds regardless of the plane's shape. (A *stream*-side shared
+      hash/availability index is the thing §3 forbids — do not conflate the two.)
+      — Plan §3, `docs/CATALOG_PIPELINE.md`
+- [ ] The metadata index is now a **curated store**, not an accelerator (the
+      "must degrade to direct upstream" wording is superseded): `musicmeta` serves
+      from Meilisearch only, MusicBrainz is an **offline** source that never runs
+      at request time, and the only writer is the offline pipeline (no
+      write-back-from-free-text). Its resilience is the versioned golden dataset in
+      storage we own (rebuildable, provider-portable), not a live-MB fallback. The
+      catalogue is **curated/official-only, not exhaustive**, and the player must
+      communicate scope (indexed counts). — Plan §Phase-3, `docs/CATALOG_PIPELINE.md`
 - [ ] `addon-sdk` imposes no assumptions about what kind of stream source
       an addon built with it uses — it's transport/protocol tooling only,
       content-agnostic. — Plan §1, §3
