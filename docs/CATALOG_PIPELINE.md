@@ -81,8 +81,13 @@ Two CC0 sources are **joined**, popularity from one and content from the other:
   the popularity scope**, so each popular artist's whole catalogue enters with no
   per-artist API calls.
 
-Each document's ranking `score` is its **artist's listen count**, so a top artist's
-songs outrank a #900 artist's on a relevance tie.
+Each document's base ranking `score` is its **artist's listen count**, so a top
+artist's songs outrank a #900 artist's on a relevance tie. On top of that, a track
+that is itself among ListenBrainz's **top recordings** gets that song's listen count
+added — the per-song boost that floats the studio hit above the same artist's own
+live / acoustic / remix versions (the canonical dump keeps all of them, and within
+one artist they would otherwise be score-tied). Only the very top songs are boosted
+(the sitewide endpoint caps at ~1000), which is exactly the high-traffic search set.
 
 > **A correction worth recording.** An earlier build used the canonical dump's own
 > `score` column as the popularity signal. It is **not** one — it behaves like a row
@@ -123,11 +128,13 @@ rule expiring old `datasets/*`.
 ## Zero-downtime reindex
 
 `import` never mutates the live index in place. It builds a fresh
-`<index>__staging`, applies the validated search settings, streams the NDJSON in,
-then **atomically swaps** staging with the live index and drops staging. Two
-properties fall out: readers see the complete old catalogue until the instant the
-complete new one is ready, and **removals propagate** — a song dropped from the
-curated set actually disappears (a merge-in-place would leave it behind).
+`<index>__staging`, applies the validated search settings, streams the NDJSON in
+(**in `batchDocs`-sized chunks** — the full catalogue is hundreds of MB and Meili
+caps a single upload at ~95 MiB, so one payload would 413), then **atomically
+swaps** staging with the live index and drops staging. Two properties fall out:
+readers see the complete old catalogue until the instant the complete new one is
+ready, and **removals propagate** — a song dropped from the curated set actually
+disappears (a merge-in-place would leave it behind).
 
 ## Unified search & ranking
 
@@ -219,4 +226,12 @@ search over the imported data). Built and pending:
       `deploy/catalog-importer.Dockerfile` + compose `import` profile + railway docs
 - [x] Slim `musicmeta` to Meili-only search + a `/stats` endpoint (counts) —
       read-only Meili client, no read-through/write-back, `SDK serveHTTP extraRoutes`
-- [ ] Player: unified search UI + "X songs · Y albums · Z artists indexed"
+- [x] Batched import (Meili caps a payload at ~95 MiB; the full catalogue is
+      hundreds of MB, so `import` uploads in `batchDocs`-sized chunks)
+- [x] Player: unified search (one box, sectioned) + "X songs · Y albums · Z artists
+      indexed" awareness line, from `/stats`
+
+**Live figures (2026-07-24, top-1000-artist scope):** ~902k docs — 993 artists,
+144k albums, 756k tracks. Spot-checked search: Taylor Swift / Radiohead / Queen /
+Daft Punk (typo-tolerant) all resolve correctly; "my world baby" → Baby by Justin
+Bieber. Within-artist version disambiguation is handled by the per-song boost.
