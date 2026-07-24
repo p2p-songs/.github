@@ -202,7 +202,8 @@ search over the imported data). Built and pending:
 - [x] Per-type counts in the manifest (for the player)
 - [x] **Full-scale source** — `build` over the MB canonical dump (popularity-scoped,
       official-by-construction; replaces the `build-sample.mjs` prototype)
-- [x] Nightly GitHub Action (build+publish → R2)
-- [ ] Railway import job (scheduled `import` inside the private network)
+- [x] Nightly GitHub Action (build+publish → R2) — proven end-to-end in CI
+- [x] Railway import job (scheduled `import` inside the private network) —
+      `deploy/catalog-importer.Dockerfile` + compose `import` profile + railway docs
 - [ ] Slim `musicmeta` to Meili-only serving + a `/stats` endpoint (counts)
 - [ ] Player: unified search UI + "X songs · Y albums · Z artists indexed"
