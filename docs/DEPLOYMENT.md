@@ -139,6 +139,16 @@ budget — a given query hits MusicBrainz once across *all* users ever, then ser
 from Meilisearch. A per-user cache would pay that once per user, which is why one
 hosted `musicmeta` + one shared index is what makes the metadata plane scale.
 
+**Ready-to-run assets:** the `addons` repo ships this whole plane under
+[`addons/deploy/`](https://github.com/p2p-songs/addons/tree/main/deploy) — a
+`docker-compose.yml` (musicmeta + a private Meilisearch on one box, Tier 0
+~€5–12/mo), a Railway two-service setup (~$15–25/mo), off-box Meilisearch
+backups, and the Cloudflare edge (the cache rule on catalog responses + one
+rate-limit rule + Bot Fight Mode). Hosting-provider trade-offs (why a stateful
+Meilisearch box can't be serverless, why the edge cache is the load-bearing
+piece for a default-installed addon) are captured there. Meilisearch stays on a
+private network behind `musicmeta`; only `musicmeta` faces Cloudflare.
+
 ## Trust cost, stated to the user
 
 A public Bitbop instance can read **both** credentials in a Shape A config: the
