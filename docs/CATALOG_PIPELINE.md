@@ -160,6 +160,17 @@ what makes real user queries work, validated against Meili's ranking with real d
 | `my world` | the **album** My World 2.0 |
 | `weekend blinding lights` (typo) | **Blinding Lights** (typo-corrected) |
 
+**Known limitation (ranking, not data).** Artist listen count is the dominant score,
+so a **bare single-word song title** resolves to the version by the *most-listened
+artist*, which isn't always the iconic one — "bad guy" surfaces Eminem's before
+Billie Eilish's. The per-song boost only corrects this where ListenBrainz's top-1000
+recording MBIDs line up with the canonical dump's canonical recording MBID, which is
+a partial overlap. Queries that name the artist ("billie eilish bad guy", "my world
+baby") rank correctly, which is how people disambiguate anyway. Tightening bare-title
+ranking needs recording-MBID-aligned popularity at scale (via the dump's
+`canonical_recording_redirect`), and is deferred as tuning to do against real usage
+rather than guess up front.
+
 ## Invariants
 
 - **Identity only** — no hashes, no stream sources, ever. Legally inert; the
