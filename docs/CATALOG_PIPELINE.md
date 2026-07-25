@@ -181,6 +181,27 @@ ranking needs recording-MBID-aligned popularity at scale (via the dump's
 `canonical_recording_redirect`), and is deferred as tuning to do against real usage
 rather than guess up front.
 
+## A search hit that plays: album context on tracks
+
+A track catalog hit carries its **`releaseId`** (`mbid:release:<uuid>`) — the
+album context a stream addon needs to resolve a *search* result playably. This
+closes a real gap: a bare recording is on dozens of releases (comps, promos,
+live, discography packs), so a stream addon given only recording+artist+title
+searches indexers by artist+title alone and either can't pick a file or picks the
+wrong one. Observed live: a brand-new single-release song played from search while
+a much-pressed 2010 song did not — the same song plays fine from the album screen,
+which *does* carry album context. With `releaseId`, a search-play is album-scoped
+and the file is selected by the recording's position on that release — identical to
+playing from the album. The builder stores `releaseId` on every track doc (it is
+the canonical release the dump already pairs with the recording); `musicmeta` also
+recovers it from the poster URL for documents written before the field existed, so
+the fix works against the current index without a rebuild. `metaPreview.releaseId`
+is a new optional protocol field, present on track previews only.
+
+The player also **collapses duplicate recordings** of one song (single / album /
+deluxe / explicit pressings all share a name) into one row, and labels each result
+row with its type (Song / Album / Artist) so a mixed list reads at a glance.
+
 ## Invariants
 
 - **Identity only** — no hashes, no stream sources, ever. Legally inert; the
