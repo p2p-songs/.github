@@ -139,9 +139,19 @@ disappears (a merge-in-place would leave it behind).
 ## Unified search & ranking
 
 The player has **one search box** over artists, albums and songs — not a
-per-type search. A single Meili query (no type filter) returns all three,
-relevance-ranked together: "justin bieber" → the artist, "my world" → the album,
-"baby" → the song.
+per-type search, and results are one **merged, relevance-ordered list**, not
+per-type sections (sectioning buried the obvious hit — a song-title query pushed
+the song below every album pressing that shares its name).
+
+The addon protocol is typed per catalog, so the player still issues one search per
+type, then merges. To make that merge coherent, `musicmeta` asks Meili for
+`showRankingScore` and forwards each hit's 0–1 relevance as `metaPreview.rankingScore`
+(a new optional protocol field); the player sorts the combined set by it. Equal
+scores — Meili gives every equally-good match the same score — break **artist →
+track → album**: an artist's only searchable text is its name, so it reaches the top
+score *only* when the query is that name (an artist query), and below that a search
+box wants to play, so a song outranks its own album pressings. Net effect: "taylor
+swift" → the artist, "teardrops on my guitar" → the song, "midnights" → the album.
 
 Ranking is driven by a stored **`searchtext = "<artist> <album> <title>"`** field
 (searchable-attributes: `searchtext`, then `name`, `description`; filterable:
