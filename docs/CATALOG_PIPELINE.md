@@ -199,8 +199,10 @@ the fix works against the current index without a rebuild. `metaPreview.releaseI
 is a new optional protocol field, present on track previews only.
 
 The player also **collapses duplicate recordings** of one song (single / album /
-deluxe / explicit pressings all share a name) into one row, and labels each result
-row with its type (Song / Album / Artist) so a mixed list reads at a glance.
+deluxe / explicit pressings all share a name) into one row, and makes each row's
+kind legible — the type woven into the subtitle ("Song · <artist>" / "Album ·
+<artist>" / "Artist") plus an artwork shape cue (artist circle, album stacked
+square, song square with a play badge) — so a mixed list reads at a glance.
 
 ## Invariants
 
