@@ -1,7 +1,7 @@
 # Uncached-download and catalog audit
 
 - **Audit ID:** A-013
-- **Status:** OPEN — 1 medium finding
+- **Status:** RECONCILED — the 1 medium addressed 2026-07-26; re-audit to confirm
 - **Supersedes:** A-012 for current implementation sign-off
 - **Audited commits:** `.github` `0645341898ef8db05343c54b304e4131c11a4cfc`; `player` `29545ac2e86d078716302451327541a8c7fb9b8b`; `addon-sdk` `abc0a1c91473f408d812f8ce9cae924e02e0ea23`; `addons` `a781579ea67d97ab56cda848110c58cb4a7c967f`; `backend` `682adc7ed6b5db10d37db9b8a344b65b663e17f9`
 - **Last updated:** 2026-07-26
@@ -34,6 +34,7 @@ finding survived the checklist's evidence, present-scope, and severity gates.
 - **Why it matters:** A user can accept an explicit cached-only explanation, install the generated URL, and press one song expecting no new download. Bitbop instead adds the album to their Real-Debrid account. The behavior is defensible and beneficial, but the stale explanation creates avoidable surprise around a credentialed, state-changing action.
 - **Suggested fix:** Replace the cached-only paragraph with concise, accurate copy explaining that an uncached play downloads the album on the user's Real-Debrid account and makes later tracks quick. If `downloadUncached` remains configurable, expose that choice or state the default plainly. Add a configure-page regression test so the displayed explanation cannot drift from the generated config again.
 - **Verdict:** CONFIRMED
+- **Resolution (2026-07-26):** The Options section's stale cached-only paragraph is replaced. It now renders a real **Download uncached tracks** checkbox — checked by default to match `bitbopConfigSchema`'s `downloadUncached: true` — and its state is written into the generated config (`downloadUncached` now rides on the base64url payload alongside `debrid`/`indexers`/`maxResults`). Revisiting `/configure` on a configured install prefills the box from the stored value. The copy states plainly that an uncached play adds the album to the user's own Real-Debrid account, downloads it with visible progress, and makes the rest of the album fast; unchecking keeps the account strictly cached-only. New `test/configure-page.test.ts` (3 tests) asserts the retired sentence is gone, the disclosure mentions the download/whole-album behavior, and — the drift guard the finding asked for — the checkbox's default-checked state is derived from and compared against `bitbopConfigSchema.parse(...).downloadUncached`, so the displayed default cannot diverge from what parsing applies. Files: `configure-page.ts` (copy, checkbox, config assembly, `readPrior`). Bitbop 200 → 205 tests, all green.
 
 ## Six-lens disposition
 

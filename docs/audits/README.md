@@ -6,7 +6,7 @@ remain as history and may contain findings that were subsequently resolved.
 
 | ID | Date | Scope | Status | Supersedes | Open findings |
 |---|---|---|---|---|---|
-| **A-013** | 2026-07-26 | [Uncached-download and catalog audit](./2026-07-26-uncached-download-and-catalog.md) | **OPEN — 1 medium finding** | A-012 for current implementation sign-off | 1 medium |
+| **A-013** | 2026-07-26 | [Uncached-download and catalog audit](./2026-07-26-uncached-download-and-catalog.md) | **RECONCILED — the 1 medium addressed 2026-07-26; re-audit to confirm** | A-012 for current implementation sign-off | None pending re-audit |
 | **A-012** | 2026-07-22 | [Product implementation re-audit](./2026-07-22-product-reaudit.md) | **RECONCILED — the 1 critical addressed 2026-07-22; re-audit to confirm** | A-011 for current implementation sign-off | None pending re-audit |
 | **A-011** | 2026-07-21 | [Bitbop and browser security](./2026-07-21-bitbop-and-browser-security.md) | **RECONCILED — all 3 (1 critical, 2 medium) addressed 2026-07-21; re-audit to confirm** | A-010 for current implementation sign-off | None pending re-audit |
 | **A-010** | 2026-07-21 | [Player P-5 minimal app](./2026-07-21-player-p5.md) | **RECONCILED — the 1 medium addressed 2026-07-21; re-audit to confirm** | A-009 for current implementation sign-off | None pending re-audit |
@@ -26,10 +26,17 @@ A-013 audited the implemented changes since A-012, including the curated catalog
 pipeline, default metadata addon, unified search and album-context handoff, and
 Bitbop's new uncached-download flow. It accepts whole-album selection as an
 intentional Real-Debrid constraint that makes later tracks fast, and found **1
-medium** UI/documentation defect: the configure page still promises a
+medium** UI/documentation defect: the configure page still promised a
 cached-only install, but generated configs intentionally default
-`downloadUncached` to `true`. The supported installation surface therefore
-describes the retired behavior.
+`downloadUncached` to `true`, so the supported installation surface described the
+retired behavior. **Reconciled 2026-07-26:** the configure page's Options section
+now carries a real **Download uncached tracks** checkbox (checked by default,
+matching the schema) whose state is written into the generated config, and its
+copy explains plainly that an uncached play adds the album to the user's own
+Real-Debrid account and makes later tracks fast. A new `configure-page.test.ts`
+pins the displayed default to `bitbopConfigSchema`'s default so the consent copy
+can't drift from the generated config again. `addons` Bitbop 200 → 205 tests.
+See the A-013 report's Resolution section.
 
 A-012 re-audited the implemented product and the A-011 reconciliation. It
 found **1 critical**: Bitbop's IPv6 policy recognizes IPv4-mapped addresses only
