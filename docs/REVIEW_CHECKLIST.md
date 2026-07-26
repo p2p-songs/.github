@@ -435,6 +435,18 @@ demonstrated failures, not maximize finding count.
 latest audit, supersession, sign-off, and open findings. The prose below is the
 chronological history.
 
+**A-013 uncached-download and catalog audit (2026-07-26): changes required — 1
+medium.** Whole-album selection is accepted as an intentional Real-Debrid
+constraint that makes later album tracks immediately available. Bitbop's
+configure page nevertheless still promises that generated installs only return
+already-cached torrents, while the generated config intentionally defaults
+`downloadUncached` to `true`. The installation surface describes the retired
+behavior and needs accurate account-mutation copy. The curated catalog, default
+metadata addon, unified-search composition, album-context handoff, resolving
+protocol, bounded player polling, and prior security/persistence boundaries
+otherwise pass the present-scope checks. See
+[`docs/audits/2026-07-26-uncached-download-and-catalog.md`](./audits/2026-07-26-uncached-download-and-catalog.md).
+
 **A-012 product implementation re-audit (2026-07-22): changes required — 1
 critical.** The A-011 SSRF reconciliation is incomplete: IPv4-mapped IPv6
 literals are rejected only in dotted-decimal form. Equivalent hexadecimal
