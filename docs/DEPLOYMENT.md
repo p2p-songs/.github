@@ -150,6 +150,15 @@ the [`@p2p-songs/catalog-builder`](https://github.com/p2p-songs/addons/tree/main
 package. Meilisearch stays private behind `musicmeta`; only `musicmeta` faces
 Cloudflare.
 
+**The stream-plane + player half** — hosting Prowlarr, Bitbop and PHONO on Railway
+in the shared-setup / Shape-A model (one Bitbop install URL you hand out) — has its
+own step-by-step runbook and prebuilt-image Dockerfiles:
+[`addons/deploy/railway/shared-setup.md`](https://github.com/p2p-songs/addons/tree/main/deploy/railway/shared-setup.md),
+[`addons/deploy/bitbop.Dockerfile`](https://github.com/p2p-songs/addons/tree/main/deploy/bitbop.Dockerfile),
+and `player/deploy/Dockerfile`. Bitbop is deployed **public-safe** (no
+`BITBOP_ALLOW_PRIVATE_INDEXERS`), which is why Prowlarr gets a public, API-key-gated
+domain — the "public | public | A → works" row above.
+
 ## Trust cost, stated to the user
 
 A public Bitbop instance can read **both** credentials in a Shape A config: the
