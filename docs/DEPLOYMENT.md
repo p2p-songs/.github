@@ -151,13 +151,21 @@ package. Meilisearch stays private behind `musicmeta`; only `musicmeta` faces
 Cloudflare.
 
 **The stream-plane + player half** — hosting Prowlarr, Bitbop and PHONO on Railway
-in the shared-setup / Shape-A model (one Bitbop install URL you hand out) — has its
+in the shared-setup / Shape-A model (one Bitbop install URL you generate) — has its
 own step-by-step runbook and prebuilt-image Dockerfiles:
 [`addons/deploy/railway/shared-setup.md`](https://github.com/p2p-songs/addons/tree/main/deploy/railway/shared-setup.md),
 [`addons/deploy/bitbop.Dockerfile`](https://github.com/p2p-songs/addons/tree/main/deploy/bitbop.Dockerfile),
 and `player/deploy/Dockerfile`. Bitbop is deployed **public-safe** (no
 `BITBOP_ALLOW_PRIVATE_INDEXERS`), which is why Prowlarr gets a public, API-key-gated
 domain — the "public | public | A → works" row above.
+
+That Bitbop URL can either be **handed to the friend to paste**, or **baked into
+PHONO** so it arrives pre-installed — the player's `VITE_DEFAULT_STREAM_ADDON_URL`
+self-host override (player `ARCHITECTURE.md` §11). Baking is off by default and
+carries no value in the repo, so the *distributed* player stays neutral (no
+bundled stream addon); a private instance that sets it is inlining a
+credential-bearing URL into its JS bundle, so it must be limited to an audience
+you'd hand the install URL to anyway — never a public image.
 
 ## Trust cost, stated to the user
 
